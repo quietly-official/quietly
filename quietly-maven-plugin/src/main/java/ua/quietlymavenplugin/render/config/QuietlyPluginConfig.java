@@ -87,6 +87,15 @@ public class QuietlyPluginConfig {
       return new File(buildDirectory, "quietly/filters-report.md").toPath();
    }
 
+   public Path jsonReportFile() {
+      Path markdownReport = reportFile();
+      String fileName = markdownReport.getFileName().toString();
+      if (fileName.endsWith(".md")) {
+         return markdownReport.resolveSibling(fileName.substring(0, fileName.length() - 3) + ".json");
+      }
+      return markdownReport.resolveSibling(fileName + ".json");
+   }
+
    public boolean failOnMissingService() {
       return failOnMissingService;
    }

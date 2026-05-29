@@ -26,6 +26,8 @@ mvn clean install
 Quick usage in another project:
 
 ```bash
+mvn compile quietly:scan
+mvn compile quietly:doctor
 mvn compile quietly:filter-tests
 ```
 

@@ -19,12 +19,12 @@ import java.io.File;
 import java.util.List;
 
 @Mojo(
-         name = "scan",
+         name = "doctor",
          defaultPhase = LifecyclePhase.PROCESS_CLASSES,
          threadSafe = true,
          requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
-public class FilterScanMojo extends AbstractMojo {
+public class FilterDoctorMojo extends AbstractMojo {
 
    @Parameter(defaultValue = "${project}", readonly = true, required = true)
    private MavenProject project;
@@ -50,9 +50,12 @@ public class FilterScanMojo extends AbstractMojo {
    @Parameter(defaultValue = "STRICT")
    private FieldResolutionMode fieldResolutionMode;
 
+   @Parameter(defaultValue = "false")
+   private boolean failOnProblems;
+
    @Override
    public void execute() throws MojoExecutionException {
-      getLog().info(Constants.QUIETLY_INFO + "Scanning filters in project");
+      getLog().info(Constants.QUIETLY_INFO + "Running project diagnostics");
 
       try {
          QuietlyPluginConfig config = new QuietlyPluginConfig(
@@ -75,12 +78,18 @@ public class FilterScanMojo extends AbstractMojo {
                   project.getBuild().getOutputDirectory()
          );
          QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(getLog(), project, config);
-         QuietlyReport report = analyzer.scan(entities);
+         QuietlyReport report = analyzer.doctor(entities);
          analyzer.logSummary(report);
          getLog().info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
          getLog().info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
+
+         if (failOnProblems && report.hasProblems()) {
+            throw new MojoExecutionException("Quietly doctor found problems. See " + config.reportFile());
+         }
+      } catch (MojoExecutionException e) {
+         throw e;
       } catch (Exception e) {
-         throw new MojoExecutionException("Quietly scan failed", e);
+         throw new MojoExecutionException("Quietly doctor failed", e);
       }
    }
 }

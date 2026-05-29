@@ -20,6 +20,7 @@ import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
 import ua.quietlymavenplugin.render.config.TestImportsConstants;
 import ua.quietlymavenplugin.render.javaparser.ImportManager;
+import ua.quietlymavenplugin.render.report.QuietlyReport;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,8 +28,6 @@ import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +38,7 @@ public class FilterTestsCodeGenerator {
    private final Log log;
    private final MavenProject project;
    private final QuietlyPluginConfig config;
-   private final List<String> reportRows = new ArrayList<>();
+   private final QuietlyReport report = new QuietlyReport();
 
    public FilterTestsCodeGenerator(Log log, MavenProject project) {
       this(log, project, QuietlyPluginConfig.defaults(project));
@@ -52,7 +51,6 @@ public class FilterTestsCodeGenerator {
    }
 
    public void generateFilterTests(List<FilterEntityInfo> entities) throws Exception {
-      reportRows.clear();
       Path testRoot = config.testOutputDirectory();
 
       try {
@@ -76,7 +74,7 @@ public class FilterTestsCodeGenerator {
             String message = "Entity " + entityName + " has Hibernate filters but no matching REST service was found. "
                      + "Expected " + serviceClassName + ". Configure servicePackagePattern/serviceNamePattern "
                      + "or set failOnMissingService=false.";
-            addReportRow(entityName, "*", "SKIPPED_MISSING_SERVICE", message);
+            report.add(entityName, "*", "SKIPPED_MISSING_SERVICE", message);
             if (config.failOnMissingService()) {
                throw new QuietlyGenerationException(message);
             }
@@ -109,7 +107,7 @@ public class FilterTestsCodeGenerator {
          Optional<ClassOrInterfaceDeclaration> maybeClass = cu.getClassByName(entityName + "FiltersTest");
          if (maybeClass.isEmpty()) {
             String message = "Class " + entityName + "FiltersTest not found in existing file " + testFilePath + ".";
-            addReportRow(entityName, "*", "SKIPPED_INVALID_EXISTING_FILE", message);
+            report.add(entityName, "*", "SKIPPED_INVALID_EXISTING_FILE", message);
             log.warn(Constants.QUIETLY_WARN + message);
             return;
          }
@@ -130,10 +128,10 @@ public class FilterTestsCodeGenerator {
             if (existingMethodNames.contains(methodName)) {
                MethodDeclaration existingMethod = classDecl.getMethodsByName(methodName).get(0);
                if (ensureQuietlyMarker(existingMethod, filter)) {
-                  addReportRow(entityName, filterName(filter), "UPDATED_MARKER",
+                  report.add(entityName, filterName(filter), "UPDATED_MARKER",
                            "Method " + methodName + " already exists; added Quietly marker.");
                } else {
-                  addReportRow(entityName, filterName(filter), "EXISTING", "Method " + methodName + " already exists.");
+                  report.add(entityName, filterName(filter), "EXISTING", "Method " + methodName + " already exists.");
                }
                continue;
             }
@@ -142,6 +140,8 @@ public class FilterTestsCodeGenerator {
                log.info(Constants.QUIETLY_INFO + "Added test: " + methodName);
             }
          }
+
+         reportStaleGeneratedTests(classDecl, entityInfo.filters(), entityName);
 
          writeCompilationUnit(testFilePath, cu);
          log.info(Constants.QUIETLY_INFO + (config.dryRun() ? "Would update test file: " : "Updated test file: ")
@@ -195,14 +195,14 @@ public class FilterTestsCodeGenerator {
                   config.fieldResolutionMode(),
                   config.disabledByDefault()
          ));
-         addReportRow(entityClass.getSimpleName(), filterName(filter), "GENERATED", "Generated test method.");
+         report.add(entityClass.getSimpleName(), filterName(filter), "GENERATED", "Generated test method.");
          return true;
       } catch (QuietlyGenerationException e) {
          if (config.failOnUnresolvedField()) {
             throw e;
          }
          String message = e.getMessage() + " Skipping this generated test because failOnUnresolvedField=false.";
-         addReportRow(entityClass.getSimpleName(), filterName(filter), "SKIPPED_UNRESOLVED_FIELD", message);
+         report.add(entityClass.getSimpleName(), filterName(filter), "SKIPPED_UNRESOLVED_FIELD", message);
          log.warn(Constants.QUIETLY_WARN + message);
          return false;
       }
@@ -238,27 +238,9 @@ public class FilterTestsCodeGenerator {
    }
 
    private void writeReport() throws IOException {
-      Path reportFile = config.reportFile();
-      Files.createDirectories(reportFile.getParent());
-
-      List<String> lines = new ArrayList<>();
-      lines.add("# Quietly Filter Generation Report");
-      lines.add("");
-      lines.add("- Generated at: `" + LocalDateTime.now() + "`");
-      lines.add("- Dry run: `" + config.dryRun() + "`");
-      lines.add("- Field resolution mode: `" + config.fieldResolutionMode() + "`");
-      lines.add("");
-      lines.add("| Entity | Filter | Status | Details |");
-      lines.add("| --- | --- | --- | --- |");
-      lines.addAll(reportRows);
-
-      Files.write(reportFile, lines, StandardCharsets.UTF_8);
-      log.info(Constants.QUIETLY_INFO + "Wrote report: " + reportFile);
-   }
-
-   private void addReportRow(String entity, String filter, String status, String details) {
-      reportRows.add("| " + escape(entity) + " | " + escape(filter) + " | " + escape(status) + " | "
-               + escape(details) + " |");
+      report.write(config);
+      log.info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
+      log.info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
    }
 
    private String filterName(FilterInfo filter) {
@@ -282,8 +264,43 @@ public class FilterTestsCodeGenerator {
       return "@quietly-generated filter=\"" + filterName(filter) + "\"";
    }
 
-   private String escape(String value) {
-      return value == null ? "" : value.replace("|", "\\|").replace("\n", " ");
+   private void reportStaleGeneratedTests(
+            ClassOrInterfaceDeclaration classDecl,
+            List<FilterInfo> currentFilters,
+            String entityName
+   ) {
+      Set<String> currentFilterNames = new HashSet<>();
+      for (FilterInfo filter : currentFilters) {
+         currentFilterNames.add(filterName(filter));
+      }
+
+      for (MethodDeclaration method : classDecl.getMethods()) {
+         Optional<String> maybeFilter = extractQuietlyGeneratedFilter(method);
+         if (maybeFilter.isPresent() && !currentFilterNames.contains(maybeFilter.get())) {
+            report.add(entityName, maybeFilter.get(), "STALE_GENERATED_TEST",
+                     "Generated method " + method.getNameAsString() + " references a filter that was not discovered anymore.");
+         }
+      }
+   }
+
+   private Optional<String> extractQuietlyGeneratedFilter(MethodDeclaration method) {
+      return method.getJavadocComment()
+               .map(JavadocComment::getContent)
+               .flatMap(this::extractQuietlyGeneratedFilter);
+   }
+
+   private Optional<String> extractQuietlyGeneratedFilter(String javadoc) {
+      String marker = "@quietly-generated filter=\"";
+      int start = javadoc.indexOf(marker);
+      if (start < 0) {
+         return Optional.empty();
+      }
+      int valueStart = start + marker.length();
+      int valueEnd = javadoc.indexOf('"', valueStart);
+      if (valueEnd < 0) {
+         return Optional.empty();
+      }
+      return Optional.of(javadoc.substring(valueStart, valueEnd));
    }
 
    private String toJavaIdentifier(String value) {

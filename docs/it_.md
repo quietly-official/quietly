@@ -78,6 +78,18 @@ Aggiungi il plugin:
 
 ## Comandi
 
+Scansiona filtri e scrive report senza generare test:
+
+```bash
+mvn compile quietly:scan
+```
+
+Esegue una diagnosi piu completa del progetto:
+
+```bash
+mvn compile quietly:doctor
+```
+
 Genera o aggiorna i test:
 
 ```bash
@@ -97,6 +109,14 @@ mvn compile quietly:filter-tests
 ```
 
 In `dryRun=true`, Quietly scansiona e scrive il report, ma non crea o modifica file di test.
+
+### Differenza Tra I Goal
+
+| Goal | Scrive test | Scopo |
+| --- | --- | --- |
+| `quietly:scan` | No | Inventario filtri, report Markdown/JSON |
+| `quietly:doctor` | No | Diagnostica di service, campi, fixture SQL e test esistenti |
+| `quietly:filter-tests` | Si, salvo `dryRun=true` | Generazione incrementale dei test |
 
 ## Cosa Viene Generato
 
@@ -230,11 +250,34 @@ Stati principali:
 | Stato | Significato |
 | --- | --- |
 | `GENERATED` | Test generato |
+| `DISCOVERED` | Filtro scoperto da `quietly:scan` |
+| `OK` | Diagnostica positiva da `quietly:doctor` |
 | `EXISTING` | Metodo gia presente |
 | `UPDATED_MARKER` | Metodo esistente aggiornato con marker Quietly |
+| `STALE_GENERATED_TEST` | Metodo generato per un filtro non piu scoperto |
 | `SKIPPED_MISSING_SERVICE` | REST service non trovato |
 | `SKIPPED_UNRESOLVED_FIELD` | Campo filtro non risolto |
+| `MISSING_SQL_FIXTURE` | Fixture SQL attesa non trovata |
+| `MISSING_TABLE_NAME` | Entity senza costante pubblica `TABLE_NAME` |
 | `SKIPPED_INVALID_EXISTING_FILE` | File esistente non contiene la classe attesa |
+
+Quietly scrive anche il report JSON accanto al Markdown:
+
+```text
+target/quietly/filters-report.json
+```
+
+Il JSON contiene una summary usabile da CI o script:
+
+```json
+{
+  "summary": {
+    "totalFilters": 10,
+    "coveredFilters": 8,
+    "coveragePercent": 80.0
+  }
+}
+```
 
 ## Requisiti Del Progetto Target
 
@@ -259,6 +302,7 @@ Quietly e progettato per essere rieseguito:
 - aggiunge metodi mancanti
 - aggiunge `beforeEach()` se manca
 - aggiunge il marker `@quietly-generated` ai metodi esistenti riconosciuti
+- segnala come `STALE_GENERATED_TEST` i metodi generati per filtri non piu presenti
 
 ## Troubleshooting
 

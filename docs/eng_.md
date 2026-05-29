@@ -78,6 +78,18 @@ Add the Maven plugin:
 
 ## Commands
 
+Scan filters and write reports without generating tests:
+
+```bash
+mvn compile quietly:scan
+```
+
+Run project diagnostics:
+
+```bash
+mvn compile quietly:doctor
+```
+
 Generate or update tests:
 
 ```bash
@@ -97,6 +109,14 @@ mvn compile quietly:filter-tests
 ```
 
 With `dryRun=true`, Quietly scans the project and writes the report, but does not create or modify test files.
+
+### Goal Differences
+
+| Goal | Writes tests | Purpose |
+| --- | --- | --- |
+| `quietly:scan` | No | Filter inventory, Markdown/JSON report |
+| `quietly:doctor` | No | Diagnostics for services, fields, SQL fixtures and existing generated tests |
+| `quietly:filter-tests` | Yes, unless `dryRun=true` | Incremental test generation |
 
 ## Generated Output
 
@@ -230,11 +250,34 @@ Main statuses:
 | Status | Meaning |
 | --- | --- |
 | `GENERATED` | Test method generated |
+| `DISCOVERED` | Filter discovered by `quietly:scan` |
+| `OK` | Positive diagnostic from `quietly:doctor` |
 | `EXISTING` | Method already exists |
 | `UPDATED_MARKER` | Existing method updated with the Quietly marker |
+| `STALE_GENERATED_TEST` | Generated method references a filter that no longer exists |
 | `SKIPPED_MISSING_SERVICE` | REST service not found |
 | `SKIPPED_UNRESOLVED_FIELD` | Filter field not resolved |
+| `MISSING_SQL_FIXTURE` | Expected SQL fixture not found |
+| `MISSING_TABLE_NAME` | Entity does not expose public `TABLE_NAME` |
 | `SKIPPED_INVALID_EXISTING_FILE` | Existing file does not contain the expected test class |
+
+Quietly also writes a JSON report next to the Markdown report:
+
+```text
+target/quietly/filters-report.json
+```
+
+The JSON report includes a CI/script-friendly summary:
+
+```json
+{
+  "summary": {
+    "totalFilters": 10,
+    "coveredFilters": 8,
+    "coveragePercent": 80.0
+  }
+}
+```
 
 ## Target Project Requirements
 
@@ -259,6 +302,7 @@ Quietly is designed to be run repeatedly:
 - it adds missing methods
 - it adds `beforeEach()` when missing
 - it adds the `@quietly-generated` marker to recognized existing methods
+- it reports generated methods for removed filters as `STALE_GENERATED_TEST`
 
 ## Troubleshooting
 

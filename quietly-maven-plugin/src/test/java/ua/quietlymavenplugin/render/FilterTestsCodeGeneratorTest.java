@@ -155,7 +155,42 @@ public class FilterTestsCodeGeneratorTest {
 
       String report = Files.readString(config.reportFile());
       assertTrue(report.contains("# Quietly Filter Generation Report"));
+      assertTrue(report.contains("- Total filters: `1`"));
+      assertTrue(report.contains("- Covered filters: `1`"));
       assertTrue(report.contains("| Customer | obj.status | GENERATED |"));
+
+      String jsonReport = Files.readString(config.jsonReportFile());
+      assertTrue(jsonReport.contains("\"totalFilters\": 1"));
+      assertTrue(jsonReport.contains("\"coveredFilters\": 1"));
+      assertTrue(jsonReport.contains("\"status\": \"GENERATED\""));
+   }
+
+   @Test
+   public void generator_reports_stale_generated_tests() throws Exception {
+      MavenProject project = project();
+      QuietlyPluginConfig config = config(project, false);
+      Path generatedFile = config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java");
+      Files.createDirectories(generatedFile.getParent());
+      Files.writeString(generatedFile, """
+               package com.acme;
+
+               public class CustomerFiltersTest {
+                   /**
+                    * @quietly-generated filter="obj.oldStatus"
+                    */
+                   public void obj_oldStatus_filter_test() {
+                   }
+               }
+               """);
+
+      FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
+      generator.generateFilterTests(List.of(new FilterEntityInfo(Customer.class, List.of(filter("obj", "status")))));
+
+      String report = Files.readString(config.reportFile());
+      String jsonReport = Files.readString(config.jsonReportFile());
+
+      assertTrue(report.contains("| Customer | obj.oldStatus | STALE_GENERATED_TEST |"));
+      assertTrue(jsonReport.contains("\"status\": \"STALE_GENERATED_TEST\""));
    }
 
    @Test
