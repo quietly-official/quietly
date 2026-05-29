@@ -9,7 +9,6 @@
     </parent>
 
     <artifactId>quietly-test-support</artifactId>
-    <version>1.0</version>
 
     <dependencies>
         <!-- REST ASSURED -->

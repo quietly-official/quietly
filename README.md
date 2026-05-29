@@ -4,6 +4,12 @@
 
 <h2 align="center"><i>Tests that grow with your code - incremental, safe, automated.</i></h2>
 
+<p align="center">
+  <a href="https://github.com/Quietly-Official/quietly-prototype/actions/workflows/build.yml">
+    <img src="https://github.com/Quietly-Official/quietly-prototype/actions/workflows/build.yml/badge.svg" alt="Build" />
+  </a>
+</p>
+
 Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities, reads Hibernate `@Filter` and `@FilterDef` metadata, and generates JUnit/RestAssured integration tests for REST filters.
 
 Start here:

@@ -1,6 +1,0 @@
-ua/quietlycore/scan/FilterScanner.class
-ua/quietlycore/model/FilterEntityInfo.class
-ua/quietlycore/scan/reflect/FilterNameNormalizer.class
-ua/quietlycore/scan/FilterScanner$FilterNameParts.class
-ua/quietlycore/scan/reflect/HibernateFilterExtractor.class
-ua/quietlycore/model/FilterInfo.class

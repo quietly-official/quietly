@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maven:
+    name: Maven verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Show tool versions
+        run: |
+          java -version
+          mvn --version
+
+      - name: Build and test
+        run: mvn -B -ntp clean verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/**"
+          if-no-files-found: ignore
+
+      - name: Upload built jars
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quietly-jars
+          path: |
+            quietly-core/target/*.jar
+            quietly-test-support/target/*.jar
+            quietly-maven-plugin/target/*.jar
+          if-no-files-found: error

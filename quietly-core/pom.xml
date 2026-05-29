@@ -9,7 +9,6 @@
     </parent>
 
     <artifactId>quietly-core</artifactId>
-    <version>1.0</version>
 
     <dependencies>
         <!-- REFLECTIONS -->
