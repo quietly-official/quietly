@@ -14,9 +14,10 @@ In pratica:
 - legge `@Filter` e `@FilterDef`
 - ricostruisce nome filtro, campo, parametro e tipo
 - trova il REST service atteso
+- diagnostica prerequisiti mancanti
 - genera o aggiorna una classe `*FiltersTest`
 - aggiunge solo i test mancanti
-- produce un report Markdown della generazione
+- produce report Markdown e JSON
 
 Quietly e pensato per progetti Quarkus con Hibernate ORM/Panache, endpoint REST e test integration.
 
@@ -88,6 +89,12 @@ Esegue una diagnosi piu completa del progetto:
 
 ```bash
 mvn compile quietly:doctor
+```
+
+Per far fallire la build quando `doctor` trova problemi:
+
+```xml
+<failOnProblems>true</failOnProblems>
 ```
 
 Genera o aggiorna i test:
@@ -210,6 +217,7 @@ customer_obj_fornitore_uuid_filter_test()
 | `failOnUnresolvedField` | `true` | Se `false`, salta filtri con campo non risolto |
 | `fieldResolutionMode` | `STRICT` | `STRICT` o `FUZZY` |
 | `dryRun` | `false` | Se `true`, non scrive test |
+| `failOnProblems` | `false` | Solo `quietly:doctor`: fallisce la build se trova problemi |
 
 Placeholder supportati:
 
@@ -360,4 +368,4 @@ Usa:
 
 ## Stato Attuale
 
-Quietly e focalizzato su Quarkus/Hibernate/Panache. Non include ancora supporto Spring, report HTML o goal separati tipo `doctor`.
+Quietly e focalizzato su Quarkus/Hibernate/Panache. Include generazione test filtri, scan, doctor, report Markdown/JSON e rilevazione dei test generati stale. Non include ancora supporto Spring o report HTML.
