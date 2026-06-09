@@ -1,4 +1,5 @@
 package ua.quietlycore.scan.reflect;
 
-public class FilterNameNormalizer {
+public class FilterNameNormalizer
+{
 }

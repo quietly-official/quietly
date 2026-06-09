@@ -10,22 +10,21 @@ import org.apache.maven.project.MavenProject;
 import ua.quietlycore.model.FilterEntityInfo;
 import ua.quietlycore.scan.EntityScanOptions;
 import ua.quietlycore.scan.FilterScanner;
-import ua.quietlymavenplugin.render.QuietlyProjectAnalyzer;
+import ua.quietlymavenplugin.render.CrudTestsCodeGenerator;
 import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
-import ua.quietlymavenplugin.render.report.QuietlyReport;
 
 import java.io.File;
 import java.util.List;
 
 @Mojo(
-         name = "scan",
-         defaultPhase = LifecyclePhase.PROCESS_CLASSES,
+         name = "crud-tests",
+         defaultPhase = LifecyclePhase.GENERATE_TEST_SOURCES,
          threadSafe = true,
          requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
-public class FilterScanMojo extends AbstractMojo
+public class CrudTestsGeneratorMojo extends AbstractMojo
 {
 
    @Parameter(defaultValue = "${project}", readonly = true, required = true)
@@ -49,13 +48,19 @@ public class FilterScanMojo extends AbstractMojo
    @Parameter
    private File reportFile;
 
-   @Parameter(defaultValue = "STRICT")
-   private FieldResolutionMode fieldResolutionMode;
+   @Parameter(defaultValue = "false")
+   private boolean disabledByDefault;
+
+   @Parameter(defaultValue = "true")
+   private boolean failOnMissingService;
+
+   @Parameter(defaultValue = "false")
+   private boolean dryRun;
 
    @Override
    public void execute() throws MojoExecutionException
    {
-      getLog().info(Constants.QUIETLY_INFO + "Scanning filters in project");
+      getLog().info(Constants.QUIETLY_INFO + "Generating CRUD smoke tests for REST services");
 
       try
       {
@@ -66,28 +71,42 @@ public class FilterScanMojo extends AbstractMojo
                   servicePackagePattern,
                   serviceNamePattern,
                   testOutputDirectory,
-                  reportFile,
-                  false,
-                  false,
-                  false,
+                  effectiveReportFile(),
+                  disabledByDefault,
+                  failOnMissingService,
                   true,
-                  fieldResolutionMode
+                  dryRun,
+                  FieldResolutionMode.STRICT
          );
+         if (!config.dryRun())
+         {
+            project.addTestCompileSourceRoot(config.testOutputDirectory().toString());
+         }
 
          List<FilterEntityInfo> entities = FilterScanner.scanProjectEntities(
                   project.getCompileClasspathElements(),
                   project.getBuild().getOutputDirectory(),
-                  EntityScanOptions.filteredApplicationEntities(config.entityPackagePatternForScan())
+                  EntityScanOptions.allApplicationEntities(config.entityPackagePatternForScan())
          );
-         QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(getLog(), project, config);
-         QuietlyReport report = analyzer.scan(entities);
-         analyzer.logSummary(report);
-         getLog().info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
-         getLog().info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
+
+         CrudTestsCodeGenerator generator = new CrudTestsCodeGenerator(getLog(), project, config);
+         generator.generateCrudTests(entities);
       }
       catch (Exception e)
       {
-         throw new MojoExecutionException("Quietly scan failed", e);
+         throw new MojoExecutionException("Quietly CRUD test generation failed", e);
       }
+   }
+
+   private File effectiveReportFile()
+   {
+      if (reportFile != null)
+      {
+         return reportFile;
+      }
+      String buildDirectory = project.getBuild() == null || project.getBuild().getDirectory() == null
+               ? new File(project.getBasedir(), "target").getPath()
+               : project.getBuild().getDirectory();
+      return new File(buildDirectory, "quietly/crud-report.md");
    }
 }

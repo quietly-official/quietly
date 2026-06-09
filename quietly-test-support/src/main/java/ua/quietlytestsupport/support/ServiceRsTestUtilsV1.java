@@ -19,9 +19,11 @@ import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class ServiceRsTestUtilsV1 {
+public abstract class ServiceRsTestUtilsV1
+{
 
-   public static String loadSqlFromClasspath(String filePath) throws IOException {
+   public static String loadSqlFromClasspath(String filePath) throws IOException
+   {
       return SqlUtils.loadSqlFromClasspath(filePath);
    }
 
@@ -34,14 +36,16 @@ public abstract class ServiceRsTestUtilsV1 {
             Class<T> map_into_class,
             String filter_type_name,
             BiConsumer<Object, SoftAssertions> validation_logic
-   ) {
+   )
+   {
 
       String fieldName = query_param.contains(".")
                ? query_param.substring(query_param.lastIndexOf('.') + 1)
                : query_param;
 
       final Field finalField = getFieldFromHierarchy(map_into_class, fieldName);
-      if (finalField == null) {
+      if (finalField == null)
+      {
          throw new RuntimeException("Il campo " + fieldName + " non esiste in " + map_into_class.getSimpleName());
       }
       finalField.setAccessible(true);
@@ -61,10 +65,13 @@ public abstract class ServiceRsTestUtilsV1 {
       SoftAssertions softly = new SoftAssertions();
 
       results.forEach(entity -> {
-         try {
+         try
+         {
             Object rawValue = finalField.get(entity);
             validation_logic.accept(rawValue, softly);
-         } catch (Exception e) {
+         }
+         catch (Exception e)
+         {
             softly.fail("Errore lettura campo " + fieldName);
          }
       });
@@ -75,12 +82,17 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Cerca il campo nella classe e in tutte le sue superclassi (necessario per Panache)
     */
-   private Field getFieldFromHierarchy(Class<?> clazz, String fieldName) {
+   private Field getFieldFromHierarchy(Class<?> clazz, String fieldName)
+   {
       Class<?> current = clazz;
-      while (current != null && current != Object.class) {
-         try {
+      while (current != null && current != Object.class)
+      {
+         try
+         {
             return current.getDeclaredField(fieldName);
-         } catch (NoSuchFieldException e) {
+         }
+         catch (NoSuchFieldException e)
+         {
             current = current.getSuperclass();
          }
       }
@@ -90,7 +102,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Parsing della Response nella classe passata
     */
-   protected <T> List<T> get_response_body_as_list_of(Response response, Class<T> clazz) {
+   protected <T> List<T> get_response_body_as_list_of(Response response, Class<T> clazz)
+   {
       Class<T[]> arrayType = (Class<T[]>) Array.newInstance(clazz, 0).getClass();
       return Arrays.asList(response.getBody().as(arrayType));
    }
@@ -98,20 +111,25 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri obj
     */
-   protected <T> void obj_filter_test(String param, Object val, Class<T> clazz) {
+   protected <T> void obj_filter_test(String param, Object val, Class<T> clazz)
+   {
       execute_filter_logic(param, val, clazz, "OBJ", (actual, softly) -> {
 
          softly.assertThat(actual)
                   .as("Il campo '" + param + "' è null")
                   .isNotNull();
 
-         if (actual == null || val == null) return;
+         if (actual == null || val == null)
+            return;
 
-         if (actual instanceof Enum<?> e) {
+         if (actual instanceof Enum<?> e)
+         {
             softly.assertThat(e.name())
                      .as("Valore enum non corrispondente")
                      .isEqualTo(val.toString());
-         } else {
+         }
+         else
+         {
             softly.assertThat(actual)
                      .as("Valore non corrispondente per " + param)
                      .isEqualTo(val);
@@ -122,7 +140,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri like
     */
-   protected <T> void like_filter_test(String param, Object val, Class<T> clazz) {
+   protected <T> void like_filter_test(String param, Object val, Class<T> clazz)
+   {
 
       String cleanVal = val == null ? "" : val.toString().replace("%", "").toLowerCase();
 
@@ -135,7 +154,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri from
     */
-   protected <T> void from_filter_test(String param, Object val, Class<T> clazz) {
+   protected <T> void from_filter_test(String param, Object val, Class<T> clazz)
+   {
       execute_filter_logic(param, val, clazz, "FROM", (actual, softly) -> {
          compare_dates(actual, val, true, softly);
       });
@@ -144,7 +164,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri to
     */
-   protected <T> void to_filter_test(String param, Object val, Class<T> clazz) {
+   protected <T> void to_filter_test(String param, Object val, Class<T> clazz)
+   {
       execute_filter_logic(param, val, clazz, "TO", (actual, softly) -> {
          compare_dates(actual, val, false, softly);
       });
@@ -153,7 +174,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri nil
     */
-   protected <T> void nil_filter_test(String param, Class<T> clazz) {
+   protected <T> void nil_filter_test(String param, Class<T> clazz)
+   {
       execute_filter_logic(param, null, clazz, "NIL", (actual, softly) -> {
          softly.assertThat(actual).isNull();
       });
@@ -162,7 +184,8 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Implementazione dei filtri not_nil
     */
-   protected <T> void not_nil_filter_test(String param, Class<T> clazz) {
+   protected <T> void not_nil_filter_test(String param, Class<T> clazz)
+   {
       execute_filter_logic(param, null, clazz, "NOT_NIL", (actual, softly) -> {
          softly.assertThat(actual).isNotNull();
       });
@@ -171,23 +194,34 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Comparatore di date
     */
-   private void compare_dates(Object actual, Object expected, boolean isFrom, SoftAssertions softly) {
+   private void compare_dates(Object actual, Object expected, boolean isFrom, SoftAssertions softly)
+   {
 
-      if (actual == null || expected == null) return;
+      if (actual == null || expected == null)
+         return;
 
-      if (actual instanceof LocalDate a && expected instanceof LocalDate e) {
-         if (isFrom) softly.assertThat(a).isAfterOrEqualTo(e);
-         else softly.assertThat(a).isBeforeOrEqualTo(e);
+      if (actual instanceof LocalDate a && expected instanceof LocalDate e)
+      {
+         if (isFrom)
+            softly.assertThat(a).isAfterOrEqualTo(e);
+         else
+            softly.assertThat(a).isBeforeOrEqualTo(e);
       }
 
-      else if (actual instanceof LocalDateTime a && expected instanceof LocalDateTime e) {
-         if (isFrom) softly.assertThat(a).isAfterOrEqualTo(e);
-         else softly.assertThat(a).isBeforeOrEqualTo(e);
+      else if (actual instanceof LocalDateTime a && expected instanceof LocalDateTime e)
+      {
+         if (isFrom)
+            softly.assertThat(a).isAfterOrEqualTo(e);
+         else
+            softly.assertThat(a).isBeforeOrEqualTo(e);
       }
 
-      else if (actual instanceof ZonedDateTime a && expected instanceof ZonedDateTime e) {
-         if (isFrom) softly.assertThat(a).isAfterOrEqualTo(e);
-         else softly.assertThat(a).isBeforeOrEqualTo(e);
+      else if (actual instanceof ZonedDateTime a && expected instanceof ZonedDateTime e)
+      {
+         if (isFrom)
+            softly.assertThat(a).isAfterOrEqualTo(e);
+         else
+            softly.assertThat(a).isBeforeOrEqualTo(e);
       }
    }
 
@@ -195,8 +229,10 @@ public abstract class ServiceRsTestUtilsV1 {
     * PanacheQuery per estrarre value da utilizzare nei test
     */
    public <T extends PanacheEntityBase> T test_entity(EntityManager em, Class<T> clazz, String query,
-            Object... params) {
-      try {
+            Object... params)
+   {
+      try
+      {
          // query
          String jpql = (query == null || query.isBlank())
                   ? "SELECT e FROM " + clazz.getSimpleName() + " e"
@@ -205,8 +241,10 @@ public abstract class ServiceRsTestUtilsV1 {
          TypedQuery<T> typedQuery = em.createQuery(jpql, clazz);
 
          // mapping dei param
-         if (params != null && params.length > 0) {
-            for (int i = 0; i < params.length; i++) {
+         if (params != null && params.length > 0)
+         {
+            for (int i = 0; i < params.length; i++)
+            {
                typedQuery.setParameter(i + 1, params[i]);
             }
          }
@@ -215,7 +253,9 @@ public abstract class ServiceRsTestUtilsV1 {
          List<T> results = typedQuery.setMaxResults(1).getResultList();
          return results.isEmpty() ? null : results.get(0);
 
-      } catch (Exception e) {
+      }
+      catch (Exception e)
+      {
          throw new RuntimeException("Errore in test_entity() su " + clazz.getSimpleName(), e);
       }
    }
@@ -223,20 +263,25 @@ public abstract class ServiceRsTestUtilsV1 {
    /**
     * Metodo helper per convertire la stringa del test nel tipo reale del campo
     */
-   private Object convertValueToFieldType(String value, Class<?> type) {
+   private Object convertValueToFieldType(String value, Class<?> type)
+   {
       if (value == null || value.isEmpty())
          return value;
 
-      if (type.equals(Integer.class) || type.equals(int.class)) {
+      if (type.equals(Integer.class) || type.equals(int.class))
+      {
          return Integer.parseInt(value);
       }
-      if (type.equals(Long.class) || type.equals(long.class)) {
+      if (type.equals(Long.class) || type.equals(long.class))
+      {
          return Long.parseLong(value);
       }
-      if (type.equals(Boolean.class) || type.equals(boolean.class)) {
+      if (type.equals(Boolean.class) || type.equals(boolean.class))
+      {
          return Boolean.parseBoolean(value);
       }
-      if (type.isEnum()) {
+      if (type.isEnum())
+      {
          // se è un enum, RestAssured deve mandare la stringa,
          // ma è utile validare qui se il valore è corretto
          return value;
@@ -244,17 +289,21 @@ public abstract class ServiceRsTestUtilsV1 {
       return value;
    }
 
-   private Object formatQueryValue(Object value) {
+   private Object formatQueryValue(Object value)
+   {
 
-      if (value instanceof LocalDateTime ldt) {
+      if (value instanceof LocalDateTime ldt)
+      {
          return ldt.toString(); // ISO-8601
       }
 
-      if (value instanceof LocalDate ld) {
+      if (value instanceof LocalDate ld)
+      {
          return ld.toString();
       }
 
-      if (value instanceof ZonedDateTime zdt) {
+      if (value instanceof ZonedDateTime zdt)
+      {
          return zdt.toLocalDateTime().toString();
       }
 

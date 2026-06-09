@@ -15,18 +15,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class FilterTestsCodeGeneratorTest {
+public class FilterTestsCodeGeneratorTest
+{
 
    @TempDir
    Path tempDir;
 
    @Test
-   public void generator_omits_disabled_annotation_by_default() throws Exception {
+   public void generator_omits_disabled_annotation_by_default() throws Exception
+   {
       Path generatedFile = generate(false);
       String generated = Files.readString(generatedFile);
 
@@ -36,7 +35,8 @@ public class FilterTestsCodeGeneratorTest {
    }
 
    @Test
-   public void generator_adds_disabled_annotation_when_configured() throws Exception {
+   public void generator_adds_disabled_annotation_when_configured() throws Exception
+   {
       Path generatedFile = generate(true);
       String generated = Files.readString(generatedFile);
 
@@ -45,7 +45,8 @@ public class FilterTestsCodeGeneratorTest {
    }
 
    @Test
-   public void generator_does_not_duplicate_existing_generated_methods() throws Exception {
+   public void generator_does_not_duplicate_existing_generated_methods() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = config(project, false);
       FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
@@ -61,14 +62,15 @@ public class FilterTestsCodeGeneratorTest {
    }
 
    @Test
-   public void generator_adds_marker_to_existing_generated_method() throws Exception {
+   public void generator_adds_marker_to_existing_generated_method() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = config(project, false);
       Path generatedFile = config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java");
       Files.createDirectories(generatedFile.getParent());
       Files.writeString(generatedFile, """
                package com.acme;
-
+               
                public class CustomerFiltersTest {
                    public void obj_status_filter_test() {
                    }
@@ -83,11 +85,12 @@ public class FilterTestsCodeGeneratorTest {
 
       assertTrue(generated.contains("@quietly-generated filter=\"obj.status\""));
       assertEquals(1, occurrences(generated, "obj_status_filter_test"));
-      assertTrue(report.contains("| Customer | obj.status | UPDATED_MARKER |"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | UPDATED_MARKER |"));
    }
 
    @Test
-   public void missing_service_uses_domain_specific_error() throws Exception {
+   public void missing_service_uses_domain_specific_error() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = new QuietlyPluginConfig(
                project,
@@ -107,15 +110,23 @@ public class FilterTestsCodeGeneratorTest {
 
       QuietlyGenerationException exception = assertThrows(
                QuietlyGenerationException.class,
-               () -> generator.generateFilterTests(List.of(new FilterEntityInfo(Customer.class, List.of(filter("obj", "status")))))
+               () -> generator.generateFilterTests(
+                        List.of(new FilterEntityInfo(Customer.class, List.of(filter("obj", "status")))))
       );
 
       assertTrue(exception.getMessage().contains("no matching REST service was found"));
       assertTrue(exception.getMessage().contains("Configure servicePackagePattern/serviceNamePattern"));
+
+      String report = Files.readString(config.reportFile());
+      assertTrue(report.contains("- Total filters: `1`"));
+      assertTrue(report.contains("- Covered filters: `0`"));
+      assertTrue(report.contains("- Generation coverage: `0.00%`"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | SKIPPED_MISSING_SERVICE |"));
    }
 
    @Test
-   public void unresolved_field_can_be_skipped_when_configured() throws Exception {
+   public void unresolved_field_can_be_skipped_when_configured() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = new QuietlyPluginConfig(
                project,
@@ -146,7 +157,8 @@ public class FilterTestsCodeGeneratorTest {
    }
 
    @Test
-   public void generator_writes_markdown_report() throws Exception {
+   public void generator_writes_markdown_report() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = config(project, false);
       FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
@@ -157,7 +169,7 @@ public class FilterTestsCodeGeneratorTest {
       assertTrue(report.contains("# Quietly Filter Generation Report"));
       assertTrue(report.contains("- Total filters: `1`"));
       assertTrue(report.contains("- Covered filters: `1`"));
-      assertTrue(report.contains("| Customer | obj.status | GENERATED |"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | GENERATED |"));
 
       String jsonReport = Files.readString(config.jsonReportFile());
       assertTrue(jsonReport.contains("\"totalFilters\": 1"));
@@ -166,14 +178,15 @@ public class FilterTestsCodeGeneratorTest {
    }
 
    @Test
-   public void generator_reports_stale_generated_tests() throws Exception {
+   public void generator_reports_stale_generated_tests() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = config(project, false);
       Path generatedFile = config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java");
       Files.createDirectories(generatedFile.getParent());
       Files.writeString(generatedFile, """
                package com.acme;
-
+               
                public class CustomerFiltersTest {
                    /**
                     * @quietly-generated filter="obj.oldStatus"
@@ -189,12 +202,13 @@ public class FilterTestsCodeGeneratorTest {
       String report = Files.readString(config.reportFile());
       String jsonReport = Files.readString(config.jsonReportFile());
 
-      assertTrue(report.contains("| Customer | obj.oldStatus | STALE_GENERATED_TEST |"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.oldStatus | STALE_GENERATED_TEST |"));
       assertTrue(jsonReport.contains("\"status\": \"STALE_GENERATED_TEST\""));
    }
 
    @Test
-   public void dry_run_writes_report_but_does_not_write_generated_test_file() throws Exception {
+   public void dry_run_writes_report_but_does_not_write_generated_test_file() throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = new QuietlyPluginConfig(
                project,
@@ -218,7 +232,8 @@ public class FilterTestsCodeGeneratorTest {
       assertTrue(Files.readString(config.reportFile()).contains("- Dry run: `true`"));
    }
 
-   private Path generate(boolean disabledByDefault) throws Exception {
+   private Path generate(boolean disabledByDefault) throws Exception
+   {
       MavenProject project = project();
       QuietlyPluginConfig config = config(project, disabledByDefault);
       FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
@@ -228,7 +243,8 @@ public class FilterTestsCodeGeneratorTest {
       return config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java");
    }
 
-   private MavenProject project() throws Exception {
+   private MavenProject project() throws Exception
+   {
       TestMavenProject project = new TestMavenProject(List.of(testClassesPath()));
       File pom = tempDir.resolve("pom.xml").toFile();
       Files.writeString(pom.toPath(), "<project />");
@@ -236,7 +252,8 @@ public class FilterTestsCodeGeneratorTest {
       return project;
    }
 
-   private QuietlyPluginConfig config(MavenProject project, boolean disabledByDefault) {
+   private QuietlyPluginConfig config(MavenProject project, boolean disabledByDefault)
+   {
       return new QuietlyPluginConfig(
                project,
                null,
@@ -253,11 +270,13 @@ public class FilterTestsCodeGeneratorTest {
       );
    }
 
-   private String testClassesPath() {
+   private String testClassesPath()
+   {
       return Path.of(Customer.class.getProtectionDomain().getCodeSource().getLocation().getPath()).toString();
    }
 
-   private FilterInfo filter(String prefix, String field) {
+   private FilterInfo filter(String prefix, String field)
+   {
       FilterInfo filter = new FilterInfo();
       filter.prefix = prefix;
       filter.field = field;
@@ -265,26 +284,31 @@ public class FilterTestsCodeGeneratorTest {
       return filter;
    }
 
-   private int occurrences(String text, String needle) {
+   private int occurrences(String text, String needle)
+   {
       int count = 0;
       int index = 0;
-      while ((index = text.indexOf(needle, index)) >= 0) {
+      while ((index = text.indexOf(needle, index)) >= 0)
+      {
          count++;
          index += needle.length();
       }
       return count;
    }
 
-   private static class TestMavenProject extends MavenProject {
+   private static class TestMavenProject extends MavenProject
+   {
 
       private final List<String> compileClasspathElements;
 
-      TestMavenProject(List<String> compileClasspathElements) {
+      TestMavenProject(List<String> compileClasspathElements)
+      {
          this.compileClasspathElements = compileClasspathElements;
       }
 
       @Override
-      public List<String> getCompileClasspathElements() {
+      public List<String> getCompileClasspathElements()
+      {
          return compileClasspathElements;
       }
    }

@@ -24,7 +24,8 @@ import java.util.List;
          threadSafe = true,
          requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
-public class FilterTestsGeneratorMojo extends AbstractMojo {
+public class FilterTestsGeneratorMojo extends AbstractMojo
+{
 
    @Parameter(defaultValue = "${project}", readonly = true, required = true)
    private MavenProject project;
@@ -63,10 +64,12 @@ public class FilterTestsGeneratorMojo extends AbstractMojo {
    private FieldResolutionMode fieldResolutionMode;
 
    @Override
-   public void execute() throws MojoExecutionException {
+   public void execute() throws MojoExecutionException
+   {
       getLog().info(Constants.QUIETLY_INFO + "Generating JUnit tests for entities filters");
 
-      try {
+      try
+      {
          QuietlyPluginConfig config = new QuietlyPluginConfig(
                   project,
                   basePackage,
@@ -81,7 +84,8 @@ public class FilterTestsGeneratorMojo extends AbstractMojo {
                   dryRun,
                   fieldResolutionMode
          );
-         if (!config.dryRun()) {
+         if (!config.dryRun())
+         {
             project.addTestCompileSourceRoot(config.testOutputDirectory().toString());
          }
 
@@ -94,7 +98,9 @@ public class FilterTestsGeneratorMojo extends AbstractMojo {
          FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(getLog(), project, config);
          generator.generateFilterTests(entitiesFilters);
 
-      } catch (Exception e) {
+      }
+      catch (Exception e)
+      {
          throw new MojoExecutionException("Quietly generate-tests failed, ", e);
       }
    }

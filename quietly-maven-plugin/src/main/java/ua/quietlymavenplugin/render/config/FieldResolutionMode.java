@@ -1,6 +1,7 @@
 package ua.quietlymavenplugin.render.config;
 
-public enum FieldResolutionMode {
+public enum FieldResolutionMode
+{
    STRICT,
    FUZZY
 }

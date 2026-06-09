@@ -5,10 +5,13 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 
-public class FileLevel {
+public class FileLevel
+{
 
-   public static void ensure_package(CompilationUnit cu, String pkg) {
-      if (cu.getPackageDeclaration().isEmpty()) {
+   public static void ensure_package(CompilationUnit cu, String pkg)
+   {
+      if (cu.getPackageDeclaration().isEmpty())
+      {
          cu.setPackageDeclaration(pkg);
       }
    }
@@ -16,7 +19,8 @@ public class FileLevel {
    public static MethodDeclaration ensure_method(
             ClassOrInterfaceDeclaration clazz,
             String name
-   ) {
+   )
+   {
       return clazz.getMethodsByName(name).stream()
                .findFirst()
                .orElseGet(() -> clazz.addMethod(name, Modifier.Keyword.PUBLIC));
@@ -26,11 +30,13 @@ public class FileLevel {
             CompilationUnit cu,
             String name,
             Modifier.Keyword... modifiers
-   ) {
+   )
+   {
       return cu.getClassByName(name)
                .orElseGet(() -> {
                   var c = cu.addClass(name);
-                  for (var m : modifiers) c.addModifier(m);
+                  for (var m : modifiers)
+                     c.addModifier(m);
                   return c;
                });
    }

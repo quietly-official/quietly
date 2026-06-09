@@ -1,4 +1,5 @@
 package com.acme.services.rs;
 
-public class CustomerServiceRs {
+public class CustomerServiceRs
+{
 }

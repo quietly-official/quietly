@@ -25,7 +25,8 @@ import java.util.List;
          threadSafe = true,
          requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
-public class FilterDoctorMojo extends AbstractMojo {
+public class FilterDoctorMojo extends AbstractMojo
+{
 
    @Parameter(defaultValue = "${project}", readonly = true, required = true)
    private MavenProject project;
@@ -55,10 +56,12 @@ public class FilterDoctorMojo extends AbstractMojo {
    private boolean failOnProblems;
 
    @Override
-   public void execute() throws MojoExecutionException {
+   public void execute() throws MojoExecutionException
+   {
       getLog().info(Constants.QUIETLY_INFO + "Running project diagnostics");
 
-      try {
+      try
+      {
          QuietlyPluginConfig config = new QuietlyPluginConfig(
                   project,
                   basePackage,
@@ -85,12 +88,17 @@ public class FilterDoctorMojo extends AbstractMojo {
          getLog().info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
          getLog().info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
 
-         if (failOnProblems && report.hasProblems()) {
+         if (failOnProblems && report.hasProblems())
+         {
             throw new MojoExecutionException("Quietly doctor found problems. See " + config.reportFile());
          }
-      } catch (MojoExecutionException e) {
+      }
+      catch (MojoExecutionException e)
+      {
          throw e;
-      } catch (Exception e) {
+      }
+      catch (Exception e)
+      {
          throw new MojoExecutionException("Quietly doctor failed", e);
       }
    }

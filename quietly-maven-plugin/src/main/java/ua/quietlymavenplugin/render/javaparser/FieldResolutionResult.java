@@ -8,7 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class FieldResolutionResult {
+public class FieldResolutionResult
+{
 
    private final Field field;
    private final List<String> warnings;
@@ -22,7 +23,8 @@ public class FieldResolutionResult {
             List<String> errors,
             String attemptedName,
             FieldResolutionMode mode
-   ) {
+   )
+   {
       this.field = field;
       this.warnings = Collections.unmodifiableList(new ArrayList<>(warnings));
       this.errors = Collections.unmodifiableList(new ArrayList<>(errors));
@@ -30,27 +32,33 @@ public class FieldResolutionResult {
       this.mode = mode;
    }
 
-   public boolean resolved() {
+   public boolean resolved()
+   {
       return field != null;
    }
 
-   public Optional<Field> field() {
+   public Optional<Field> field()
+   {
       return Optional.ofNullable(field);
    }
 
-   public List<String> warnings() {
+   public List<String> warnings()
+   {
       return warnings;
    }
 
-   public List<String> errors() {
+   public List<String> errors()
+   {
       return errors;
    }
 
-   public String attemptedName() {
+   public String attemptedName()
+   {
       return attemptedName;
    }
 
-   public FieldResolutionMode mode() {
+   public FieldResolutionMode mode()
+   {
       return mode;
    }
 }

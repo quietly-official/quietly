@@ -6,16 +6,19 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.type.Type;
 
-public class MethodDsl {
+public class MethodDsl
+{
 
    private final MethodDeclaration method = new MethodDeclaration();
 
-   public MethodDsl(String returnType, String name) {
+   public MethodDsl(String returnType, String name)
+   {
       method.setType(returnType);
       method.setName(name);
    }
 
-   public MethodDeclaration build() {
+   public MethodDeclaration build()
+   {
       return method;
    }
 
@@ -23,22 +26,26 @@ public class MethodDsl {
    // ===== MODIFIERS =========
    // =========================
 
-   public MethodDsl public_() {
+   public MethodDsl public_()
+   {
       method.addModifier(Modifier.Keyword.PUBLIC);
       return this;
    }
 
-   public MethodDsl private_() {
+   public MethodDsl private_()
+   {
       method.addModifier(Modifier.Keyword.PRIVATE);
       return this;
    }
 
-   public MethodDsl protected_() {
+   public MethodDsl protected_()
+   {
       method.addModifier(Modifier.Keyword.PROTECTED);
       return this;
    }
 
-   public MethodDsl static_() {
+   public MethodDsl static_()
+   {
       method.addModifier(Modifier.Keyword.STATIC);
       return this;
    }
@@ -47,7 +54,8 @@ public class MethodDsl {
    // ===== PARAMETERS ========
    // =========================
 
-   public MethodDsl param(String type, String name) {
+   public MethodDsl param(String type, String name)
+   {
       Type t = StaticJavaParser.parseType(type);
       method.addParameter(new Parameter(t, name));
       return this;
@@ -57,7 +65,8 @@ public class MethodDsl {
    // ===== THROWS ============
    // =========================
 
-   public MethodDsl throws_(String exceptionType) {
+   public MethodDsl throws_(String exceptionType)
+   {
       method.addThrownException(StaticJavaParser.parseClassOrInterfaceType(exceptionType));
       return this;
    }
@@ -65,11 +74,13 @@ public class MethodDsl {
    // =========================
    // ===== ANNOTATIONS =======
    // =========================
-   public AnnotationDsl annotation(String name) {
+   public AnnotationDsl annotation(String name)
+   {
       return new AnnotationDsl(method, this).normal(name);
    }
 
-   public MethodDsl markerAnnotation(String name) {
+   public MethodDsl markerAnnotation(String name)
+   {
       method.addMarkerAnnotation(name);
       return this;
    }
@@ -78,10 +89,10 @@ public class MethodDsl {
    // ===== BODY ==============
    // =========================
 
-   public MethodDsl body(StatementDsl bodyDsl) {
+   public MethodDsl body(StatementDsl bodyDsl)
+   {
       method.setBody(bodyDsl.build());
       return this;
    }
-
 
 }

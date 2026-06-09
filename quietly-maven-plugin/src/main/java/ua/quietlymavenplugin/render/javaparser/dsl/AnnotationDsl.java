@@ -7,25 +7,29 @@ import ua.quietlymavenplugin.render.javaparser.Expressions;
 /**
  * Costruisce annotazioni
  */
-public class AnnotationDsl {
+public class AnnotationDsl
+{
 
    private final MethodDeclaration method;
    private final MethodDsl parent;
    private AnnotationExpr current;
 
-   public AnnotationDsl(MethodDeclaration method, MethodDsl parent) {
+   public AnnotationDsl(MethodDeclaration method, MethodDsl parent)
+   {
       this.method = method;
       this.parent = parent;
    }
 
-   public AnnotationDsl marker(String name) {
+   public AnnotationDsl marker(String name)
+   {
       MarkerAnnotationExpr ann = new MarkerAnnotationExpr(name);
       method.addAnnotation(ann);
       current = ann;
       return this;
    }
 
-   public AnnotationDsl normal(String name) {
+   public AnnotationDsl normal(String name)
+   {
       NormalAnnotationExpr ann = new NormalAnnotationExpr();
       ann.setName(name);
       current = ann;
@@ -33,15 +37,18 @@ public class AnnotationDsl {
       return this;
    }
 
-   public AnnotationDsl param(String key, Object value) {
+   public AnnotationDsl param(String key, Object value)
+   {
       if (!(current instanceof NormalAnnotationExpr ann))
          throw new IllegalStateException("param() called without normal()");
       ann.addPair(key, Expressions.toExpression(value));
       return this;
    }
 
-   public AnnotationDsl singleMember(Expression value) {
-      if (current instanceof NormalAnnotationExpr ann) {
+   public AnnotationDsl singleMember(Expression value)
+   {
+      if (current instanceof NormalAnnotationExpr ann)
+      {
          // trasforma NormalAnnotationExpr in SingleMemberAnnotationExpr
          SingleMemberAnnotationExpr sma = new SingleMemberAnnotationExpr(
                   ann.getName(), value
@@ -51,7 +58,9 @@ public class AnnotationDsl {
          method.addAnnotation(sma);
          current = sma;
          return this;
-      } else if (current == null) {
+      }
+      else if (current == null)
+      {
          // crea da zero
          SingleMemberAnnotationExpr sma = new SingleMemberAnnotationExpr(
                   new Name("Unknown"), value
@@ -59,12 +68,15 @@ public class AnnotationDsl {
          method.addAnnotation(sma);
          current = sma;
          return this;
-      } else {
+      }
+      else
+      {
          throw new IllegalStateException("singleMember() deve essere chiamato su annotation appena creata");
       }
    }
 
-   public AnnotationDsl singleMemberDynamic(String annotationName, Expression valueExpression) {
+   public AnnotationDsl singleMemberDynamic(String annotationName, Expression valueExpression)
+   {
       SingleMemberAnnotationExpr ann = new SingleMemberAnnotationExpr(
                new Name(annotationName),
                valueExpression
@@ -74,7 +86,8 @@ public class AnnotationDsl {
       return this;
    }
 
-   public MethodDsl apply() {
+   public MethodDsl apply()
+   {
       return parent;
    }
 }

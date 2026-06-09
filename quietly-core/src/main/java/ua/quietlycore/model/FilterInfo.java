@@ -1,6 +1,7 @@
 package ua.quietlycore.model;
 
-public class FilterInfo {
+public class FilterInfo
+{
    public String prefix;    // "obj"
    public String field;     // "uuids"
    public String condition; // "uuid IN :uuids
@@ -8,7 +9,8 @@ public class FilterInfo {
    public Class<?> paramType; // String ecc...
 
    @Override
-   public String toString() {
+   public String toString()
+   {
       return "FilterInfo{" +
                "prefix='" + prefix + '\'' +
                ", field='" + field + '\'' +

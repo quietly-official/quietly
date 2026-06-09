@@ -5,8 +5,8 @@ import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.ParamDef;
 import org.junit.jupiter.api.Test;
-import ua.quietlycore.model.FilterInfo;
 import ua.quietlycore.model.FilterEntityInfo;
+import ua.quietlycore.model.FilterInfo;
 import ua.quietlycore.scan.fixtures.allowed.FilteredEntity;
 import ua.quietlycore.scan.fixtures.allowed.PlainEntity;
 import ua.quietlycore.scan.fixtures.allowed.deep.NestedFilteredEntity;
@@ -16,14 +16,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class FilterScannerTest {
+public class FilterScannerTest
+{
 
    @Test
-   public void scan_entity_keeps_namespaced_prefix_and_uses_last_segment_as_field() {
+   public void scan_entity_keeps_namespaced_prefix_and_uses_last_segment_as_field()
+   {
       List<FilterInfo> filters = FilterScanner.scanEntity(Customer.class);
 
       assertEquals(1, filters.size());
@@ -34,7 +34,8 @@ public class FilterScannerTest {
    }
 
    @Test
-   public void application_scan_includes_all_entities_in_allowed_package() throws Exception {
+   public void application_scan_includes_all_entities_in_allowed_package() throws Exception
+   {
       List<FilterEntityInfo> entities = scan(
                EntityScanOptions.allApplicationEntities("ua.quietlycore.scan.fixtures.allowed")
       );
@@ -45,7 +46,8 @@ public class FilterScannerTest {
    }
 
    @Test
-   public void filter_scan_excludes_entities_without_filters() throws Exception {
+   public void filter_scan_excludes_entities_without_filters() throws Exception
+   {
       List<FilterEntityInfo> entities = scan(
                EntityScanOptions.filteredApplicationEntities("ua.quietlycore.scan.fixtures.allowed")
       );
@@ -56,7 +58,8 @@ public class FilterScannerTest {
    }
 
    @Test
-   public void scan_excludes_entities_outside_configured_package() throws Exception {
+   public void scan_excludes_entities_outside_configured_package() throws Exception
+   {
       List<FilterEntityInfo> entities = scan(
                EntityScanOptions.filteredApplicationEntities("ua.quietlycore.scan.fixtures.allowed")
       );
@@ -65,7 +68,8 @@ public class FilterScannerTest {
    }
 
    @Test
-   public void package_wildcard_includes_subpackages_but_not_siblings() throws Exception {
+   public void package_wildcard_includes_subpackages_but_not_siblings() throws Exception
+   {
       List<FilterEntityInfo> entities = scan(
                EntityScanOptions.filteredApplicationEntities("ua.quietlycore.scan.fixtures.allowed.*")
       );
@@ -73,14 +77,29 @@ public class FilterScannerTest {
       assertEquals(Set.of(FilteredEntity.class, NestedFilteredEntity.class), entityClasses(entities));
    }
 
-   private List<FilterEntityInfo> scan(EntityScanOptions options) throws Exception {
+   @Test
+   public void application_scan_returns_entities_in_deterministic_class_name_order() throws Exception
+   {
+      List<FilterEntityInfo> entities = scan(
+               EntityScanOptions.allApplicationEntities("ua.quietlycore.scan.fixtures.allowed.*")
+      );
+
+      assertEquals(
+               List.of(FilteredEntity.class, PlainEntity.class, NestedFilteredEntity.class),
+               entities.stream().map(FilterEntityInfo::entityClass).toList()
+      );
+   }
+
+   private List<FilterEntityInfo> scan(EntityScanOptions options) throws Exception
+   {
       String testClasses = Path.of(
                FilterScannerTest.class.getProtectionDomain().getCodeSource().getLocation().toURI()
       ).toString();
       return FilterScanner.scanProjectEntities(List.of(testClasses), testClasses, options);
    }
 
-   private Set<Class<?>> entityClasses(List<FilterEntityInfo> entities) {
+   private Set<Class<?>> entityClasses(List<FilterEntityInfo> entities)
+   {
       return entities.stream()
                .map(FilterEntityInfo::entityClass)
                .collect(Collectors.toSet());

@@ -6,14 +6,14 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class QuietlyPluginConfigTest {
+public class QuietlyPluginConfigTest
+{
 
    @Test
-   public void defaults_preserve_current_conventions() {
+   public void defaults_preserve_current_conventions()
+   {
       MavenProject project = new MavenProject();
       project.setFile(new File("pom.xml").getAbsoluteFile());
 
@@ -30,7 +30,8 @@ public class QuietlyPluginConfigTest {
    }
 
    @Test
-   public void custom_patterns_resolve_placeholders() {
+   public void custom_patterns_resolve_placeholders()
+   {
       MavenProject project = new MavenProject();
       project.setFile(new File("pom.xml").getAbsoluteFile());
 
@@ -61,7 +62,8 @@ public class QuietlyPluginConfigTest {
    }
 
    @Test
-   public void scan_pattern_requires_base_package_when_placeholder_is_used() {
+   public void scan_pattern_requires_base_package_when_placeholder_is_used()
+   {
       MavenProject project = new MavenProject();
       project.setFile(new File("pom.xml").getAbsoluteFile());
 

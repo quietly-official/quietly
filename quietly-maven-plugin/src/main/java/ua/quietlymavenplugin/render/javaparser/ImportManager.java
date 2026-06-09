@@ -12,47 +12,55 @@ import java.util.Set;
 /**
  * Gestisce import in modo centralizzato, evitando duplicati e gestendo import static
  */
-public class ImportManager {
+public class ImportManager
+{
 
    private final CompilationUnit cu;
    private final Set<String> normalImports = new HashSet<>();
    private final Set<String> staticImports = new HashSet<>();
 
-   public ImportManager(CompilationUnit cu) {
+   public ImportManager(CompilationUnit cu)
+   {
       this.cu = cu;
-   }
-
-   /**
-    * Aggiunge import normale evitando duplicati
-    */
-   public void add_import(String className) {
-      if (normalImports.add(className)) {
-         cu.addImport(className);
-      }
    }
 
    /**
     * Aggiunge import evitando duplicati.
     */
-   public static void add_imports(List<String> importsToAdd, CompilationUnit cu) {
+   public static void add_imports(List<String> importsToAdd, CompilationUnit cu)
+   {
       importsToAdd.forEach(i -> {
          boolean exists = cu.getImports().stream()
                   .anyMatch(existing ->
                            !existing.isStatic() &&
                                     existing.getNameAsString().equals(i)
                   );
-         if (!exists) {
+         if (!exists)
+         {
             cu.addImport(i);
          }
       });
    }
 
    /**
+    * Aggiunge import normale evitando duplicati
+    */
+   public void add_import(String className)
+   {
+      if (normalImports.add(className))
+      {
+         cu.addImport(className);
+      }
+   }
+
+   /**
     * Aggiunge import static evitando duplicati
     */
-   public void add_static_import(String className, String member) {
+   public void add_static_import(String className, String member)
+   {
       String full = className + "." + member;
-      if (staticImports.add(full)) {
+      if (staticImports.add(full))
+      {
          // (name, isStatic, isAsterisk)
          cu.addImport(full, true, false);
       }
@@ -61,7 +69,8 @@ public class ImportManager {
    /**
     * Crea un FieldAccessExpr per accesso statico (Tipo.CAMPO)
     */
-   public FieldAccessExpr static_field(Class<?> clazz, String field) {
+   public FieldAccessExpr static_field(Class<?> clazz, String field)
+   {
       add_import(clazz.getName());
       return new FieldAccessExpr(new NameExpr(clazz.getSimpleName()), field);
    }
@@ -69,21 +78,24 @@ public class ImportManager {
    /**
     * Crea un NameExpr dinamico (variabile o costante)
     */
-   public NameExpr name(String name) {
+   public NameExpr name(String name)
+   {
       return new NameExpr(name);
    }
 
    /**
     * Aggiunge più import evitando duplicati
     */
-   public void add_imports(List<String> importsToAdd) {
+   public void add_imports(List<String> importsToAdd)
+   {
       importsToAdd.forEach(this::add_import);
    }
 
    /**
     * Converte Class<?> in ClassOrInterfaceType e aggiunge l'import
     */
-   public ClassOrInterfaceType class_type(Class<?> clazz) {
+   public ClassOrInterfaceType class_type(Class<?> clazz)
+   {
       add_import(clazz.getName());
       return new ClassOrInterfaceType(null, clazz.getSimpleName());
    }

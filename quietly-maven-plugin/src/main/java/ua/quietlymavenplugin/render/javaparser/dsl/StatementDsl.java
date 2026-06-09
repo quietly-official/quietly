@@ -6,11 +6,13 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.*;
 
-public class StatementDsl {
+public class StatementDsl
+{
 
    private final BlockStmt block = new BlockStmt();
 
-   public BlockStmt build() {
+   public BlockStmt build()
+   {
       return block;
    }
 
@@ -18,7 +20,8 @@ public class StatementDsl {
    // ====== EXPRESSION STATEMENT ===
    // ===============================
 
-   public StatementDsl stmt(Expression expr) {
+   public StatementDsl stmt(Expression expr)
+   {
       block.addStatement(new ExpressionStmt(expr));
       return this;
    }
@@ -27,7 +30,8 @@ public class StatementDsl {
    // ========= VARIABLE DECL =======
    // ===============================
 
-   public StatementDsl var(String type, String name, Expression initializer) {
+   public StatementDsl var(String type, String name, Expression initializer)
+   {
 
       VariableDeclarator vd = new VariableDeclarator(
                StaticJavaParser.parseType(type),
@@ -45,7 +49,8 @@ public class StatementDsl {
    // =========== RETURN ============
    // ===============================
 
-   public StatementDsl returning(Expression expr) {
+   public StatementDsl returning(Expression expr)
+   {
       block.addStatement(new ReturnStmt(expr));
       return this;
    }
@@ -54,12 +59,14 @@ public class StatementDsl {
    // ============= IF ==============
    // ===============================
 
-   public StatementDsl ifStmt(Expression condition, StatementDsl thenBlock) {
+   public StatementDsl ifStmt(Expression condition, StatementDsl thenBlock)
+   {
       block.addStatement(new IfStmt(condition, thenBlock.build(), null));
       return this;
    }
 
-   public StatementDsl ifElse(Expression condition, StatementDsl thenBlock, StatementDsl elseBlock) {
+   public StatementDsl ifElse(Expression condition, StatementDsl thenBlock, StatementDsl elseBlock)
+   {
       block.addStatement(new IfStmt(condition, thenBlock.build(), elseBlock.build()));
       return this;
    }
@@ -73,7 +80,8 @@ public class StatementDsl {
             String exceptionType,
             String exceptionName,
             StatementDsl catchBlock
-   ) {
+   )
+   {
       TryStmt tryStmt = new TryStmt();
       tryStmt.setTryBlock(tryBlock.build());
 
@@ -94,7 +102,8 @@ public class StatementDsl {
    // ============== FOR ============
    // ===============================
 
-   public StatementDsl forEach(String varType, String varName, Expression iterable, StatementDsl bodyDsl) {
+   public StatementDsl forEach(String varType, String varName, Expression iterable, StatementDsl bodyDsl)
+   {
 
       VariableDeclarator vd = new VariableDeclarator(
                StaticJavaParser.parseType(varType),

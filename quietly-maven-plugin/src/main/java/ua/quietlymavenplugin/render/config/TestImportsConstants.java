@@ -2,7 +2,8 @@ package ua.quietlymavenplugin.render.config;
 
 import java.util.List;
 
-public class TestImportsConstants {
+public class TestImportsConstants
+{
 
    public static final List<String> CORE_TEST_IMPORTS = List.of(
             "org.junit.jupiter.api.Test",

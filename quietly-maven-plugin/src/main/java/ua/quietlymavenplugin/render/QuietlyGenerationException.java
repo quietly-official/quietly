@@ -1,12 +1,15 @@
 package ua.quietlymavenplugin.render;
 
-public class QuietlyGenerationException extends RuntimeException {
+public class QuietlyGenerationException extends RuntimeException
+{
 
-   public QuietlyGenerationException(String message) {
+   public QuietlyGenerationException(String message)
+   {
       super(message);
    }
 
-   public QuietlyGenerationException(String message, Throwable cause) {
+   public QuietlyGenerationException(String message, Throwable cause)
+   {
       super(message, cause);
    }
 }

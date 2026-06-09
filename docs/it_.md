@@ -289,11 +289,11 @@ target/quietly/filters-report.md
 Esempio:
 
 ```markdown
-| Entity | Filter | Status | Details |
-| --- | --- | --- | --- |
-| Customer | obj.status | GENERATED | Generated test method. |
-| Worker | obj.data_riferimento | SKIPPED_UNRESOLVED_FIELD | ... |
-| UtenteFattura | * | SKIPPED_MISSING_SERVICE | ... |
+| Entity | Capability | Subject | Status | Details |
+| --- | --- | --- | --- | --- |
+| Customer | FILTER_TEST | obj.status | GENERATED | Generated test method. |
+| Worker | FILTER_TEST | obj.data_riferimento | SKIPPED_UNRESOLVED_FIELD | ... |
+| UtenteFattura | DIAGNOSTIC | missing-service | SKIPPED_MISSING_SERVICE | ... |
 ```
 
 Stati principali:
@@ -325,17 +325,28 @@ target/quietly/crud-report.md
 target/quietly/crud-report.json
 ```
 
-Il JSON contiene una summary usabile da CI o script:
+Il JSON contiene una summary specifica per il goal, usabile da CI o script.
+
+Esempio `quietly:doctor`:
 
 ```json
 {
   "summary": {
-    "totalFilters": 10,
-    "coveredFilters": 8,
-    "coveragePercent": 80.0
+    "analyzedFilters": 10,
+    "readyFilters": 9,
+    "readinessPercent": 90.0,
+    "existingGeneratedTests": 8,
+    "diagnostics": 3,
+    "problems": 1
   }
 }
 ```
+
+I conteggi sono basati sull'identita logica `(entity, capability, subject)`: piu eventi sullo stesso filtro o sulla stessa operazione non gonfiano il totale.
+
+`scan` mostra esclusivamente l'inventario dei filtri. `doctor` calcola la readiness dei filtri rispetto a service e campi e riporta separatamente i test generati gia esistenti. `filter-tests` calcola invece la generation coverage.
+
+Una percentuale con denominatore zero vale `0.00%`, non `100%`.
 
 ## Requisiti Del Progetto Target
 

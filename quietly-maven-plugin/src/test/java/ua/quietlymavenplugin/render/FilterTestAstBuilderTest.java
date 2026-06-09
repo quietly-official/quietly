@@ -6,14 +6,14 @@ import org.junit.jupiter.api.Test;
 import ua.quietlycore.model.FilterInfo;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-class FilterTestAstBuilderTest {
+class FilterTestAstBuilderTest
+{
 
    @Test
-   public void generated_test_method_is_active_by_default() {
+   public void generated_test_method_is_active_by_default()
+   {
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("obj", "status"),
                Customer.class,
@@ -27,7 +27,8 @@ class FilterTestAstBuilderTest {
    }
 
    @Test
-   public void generated_test_method_can_be_disabled_with_reason() {
+   public void generated_test_method_can_be_disabled_with_reason()
+   {
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("obj", "status"),
                Customer.class,
@@ -40,7 +41,8 @@ class FilterTestAstBuilderTest {
    }
 
    @Test
-   public void namespaced_filter_name_generates_valid_java_method_name() {
+   public void namespaced_filter_name_generates_valid_java_method_name()
+   {
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("customer.obj", "fornitore_uuid"),
                Customer.class,
@@ -54,7 +56,8 @@ class FilterTestAstBuilderTest {
    }
 
    @Test
-   public void non_java_lang_field_type_is_fully_qualified() {
+   public void non_java_lang_field_type_is_fully_qualified()
+   {
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("from", "dataRiferimento"),
                DateCustomer.class,
@@ -67,7 +70,8 @@ class FilterTestAstBuilderTest {
    }
 
    @Test
-   public void unresolved_field_uses_domain_specific_error() {
+   public void unresolved_field_uses_domain_specific_error()
+   {
       QuietlyGenerationException exception = assertThrows(
                QuietlyGenerationException.class,
                () -> FilterTestAstBuilder.buildFilterTestMethod(
@@ -82,7 +86,8 @@ class FilterTestAstBuilderTest {
       assertTrue(exception.getMessage().contains("Use fieldResolutionMode=FUZZY or fix the filter metadata"));
    }
 
-   private FilterInfo filter(String prefix, String field) {
+   private FilterInfo filter(String prefix, String field)
+   {
       FilterInfo filter = new FilterInfo();
       filter.prefix = prefix;
       filter.field = field;

@@ -6,7 +6,8 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
 
-public class QuietlyPluginConfig {
+public class QuietlyPluginConfig
+{
 
    private final MavenProject project;
    private final String basePackage;
@@ -34,7 +35,8 @@ public class QuietlyPluginConfig {
             boolean failOnUnresolvedField,
             boolean dryRun,
             FieldResolutionMode fieldResolutionMode
-   ) {
+   )
+   {
       this.project = project;
       this.basePackage = blankToNull(basePackage);
       this.entityPackagePattern = blankToNull(entityPackagePattern);
@@ -49,7 +51,8 @@ public class QuietlyPluginConfig {
       this.fieldResolutionMode = fieldResolutionMode == null ? FieldResolutionMode.STRICT : fieldResolutionMode;
    }
 
-   public static QuietlyPluginConfig defaults(MavenProject project) {
+   public static QuietlyPluginConfig defaults(MavenProject project)
+   {
       return new QuietlyPluginConfig(
                project,
                null,
@@ -66,19 +69,29 @@ public class QuietlyPluginConfig {
       );
    }
 
-   public Path testOutputDirectory() {
-      if (testOutputDirectory != null) {
+   private static String blankToNull(String value)
+   {
+      return value == null || value.isBlank() ? null : value;
+   }
+
+   public Path testOutputDirectory()
+   {
+      if (testOutputDirectory != null)
+      {
          return testOutputDirectory.toPath();
       }
       return new File(project.getBasedir(), "src/test/java").toPath();
    }
 
-   public boolean disabledByDefault() {
+   public boolean disabledByDefault()
+   {
       return disabledByDefault;
    }
 
-   public Path reportFile() {
-      if (reportFile != null) {
+   public Path reportFile()
+   {
+      if (reportFile != null)
+      {
          return reportFile.toPath();
       }
       String buildDirectory = project.getBuild() == null || project.getBuild().getDirectory() == null
@@ -87,39 +100,49 @@ public class QuietlyPluginConfig {
       return new File(buildDirectory, "quietly/filters-report.md").toPath();
    }
 
-   public Path jsonReportFile() {
+   public Path jsonReportFile()
+   {
       Path markdownReport = reportFile();
       String fileName = markdownReport.getFileName().toString();
-      if (fileName.endsWith(".md")) {
+      if (fileName.endsWith(".md"))
+      {
          return markdownReport.resolveSibling(fileName.substring(0, fileName.length() - 3) + ".json");
       }
       return markdownReport.resolveSibling(fileName + ".json");
    }
 
-   public boolean failOnMissingService() {
+   public boolean failOnMissingService()
+   {
       return failOnMissingService;
    }
 
-   public boolean failOnUnresolvedField() {
+   public boolean failOnUnresolvedField()
+   {
       return failOnUnresolvedField;
    }
 
-   public boolean dryRun() {
+   public boolean dryRun()
+   {
       return dryRun;
    }
 
-   public FieldResolutionMode fieldResolutionMode() {
+   public FieldResolutionMode fieldResolutionMode()
+   {
       return fieldResolutionMode;
    }
 
-   public String entityPackagePatternForScan() {
-      if (entityPackagePattern == null) {
+   public String entityPackagePatternForScan()
+   {
+      if (entityPackagePattern == null)
+      {
          return null;
       }
-      if (!entityPackagePattern.contains("${basePackage}")) {
+      if (!entityPackagePattern.contains("${basePackage}"))
+      {
          return entityPackagePattern;
       }
-      if (basePackage == null) {
+      if (basePackage == null)
+      {
          throw new IllegalArgumentException(
                   "entityPackagePattern uses ${basePackage}, but basePackage is not configured."
          );
@@ -127,11 +150,14 @@ public class QuietlyPluginConfig {
       return entityPackagePattern.replace("${basePackage}", basePackage);
    }
 
-   public String resolveRootPackage(Class<?> entityClass) {
+   public String resolveRootPackage(Class<?> entityClass)
+   {
       String entityPackage = entityClass.getPackageName();
-      if (entityPackagePattern != null) {
+      if (entityPackagePattern != null)
+      {
          String configuredEntityPackage = applyPattern(entityPackagePattern, entityClass);
-         if (entityPackage.equals(configuredEntityPackage) && basePackage != null) {
+         if (entityPackage.equals(configuredEntityPackage) && basePackage != null)
+         {
             return basePackage;
          }
       }
@@ -141,8 +167,10 @@ public class QuietlyPluginConfig {
                : entityPackage;
    }
 
-   public String resolveServicePackage(Class<?> entityClass) {
-      if (servicePackagePattern != null) {
+   public String resolveServicePackage(Class<?> entityClass)
+   {
+      if (servicePackagePattern != null)
+      {
          return applyPattern(servicePackagePattern, entityClass);
       }
 
@@ -151,18 +179,22 @@ public class QuietlyPluginConfig {
                : entityClass.getPackageName() + ".services.rs";
    }
 
-   public String resolveServiceName(Class<?> entityClass) {
-      if (serviceNamePattern != null) {
+   public String resolveServiceName(Class<?> entityClass)
+   {
+      if (serviceNamePattern != null)
+      {
          return applyPattern(serviceNamePattern, entityClass);
       }
       return entityClass.getSimpleName() + "ServiceRs";
    }
 
-   public String resolveServiceClassName(Class<?> entityClass) {
+   public String resolveServiceClassName(Class<?> entityClass)
+   {
       return resolveServicePackage(entityClass) + "." + resolveServiceName(entityClass);
    }
 
-   private String applyPattern(String pattern, Class<?> entityClass) {
+   private String applyPattern(String pattern, Class<?> entityClass)
+   {
       String effectiveBasePackage = basePackage != null ? basePackage : resolveLegacyBasePackage(entityClass);
       Map<String, String> placeholders = Map.of(
                "${basePackage}", effectiveBasePackage,
@@ -170,20 +202,18 @@ public class QuietlyPluginConfig {
       );
 
       String result = pattern;
-      for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+      for (Map.Entry<String, String> entry : placeholders.entrySet())
+      {
          result = result.replace(entry.getKey(), entry.getValue());
       }
       return result;
    }
 
-   private String resolveLegacyBasePackage(Class<?> entityClass) {
+   private String resolveLegacyBasePackage(Class<?> entityClass)
+   {
       String entityPackage = entityClass.getPackageName();
       return entityPackage.endsWith(".model")
                ? entityPackage.substring(0, entityPackage.lastIndexOf(".model"))
                : entityPackage;
-   }
-
-   private static String blankToNull(String value) {
-      return value == null || value.isBlank() ? null : value;
    }
 }
