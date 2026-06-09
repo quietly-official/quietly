@@ -8,7 +8,7 @@ import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FilterTestAstBuilderTest
+public class FilterTestAstBuilderTest
 {
 
    @Test

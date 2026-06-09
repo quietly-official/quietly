@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/quietly_hd_dark_theme.png" style="width: 500px; border: 1px solid #ccc;" />
+  <img src="docs/img/quietly_logo_upscaled.png" style="width: 500px; border: 1px solid #ccc;" />
 </p>
 
 <h2 align="center"><i>Tests that grow with your code - incremental, safe, automated.</i></h2>
@@ -10,7 +10,9 @@
   </a>
 </p>
 
-Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities, reads Hibernate `@Filter` and `@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST filters.
+Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities, reads Hibernate `@Filter` and
+`@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST
+filters.
 
 Start here:
 
@@ -48,4 +50,5 @@ target/quietly/crud-report.md
 target/quietly/crud-report.json
 ```
 
-Current scope: Quarkus, Hibernate ORM/Panache, REST endpoints, and integration tests. Spring support and HTML reports are intentionally out of scope for now.
+Current scope: Quarkus, Hibernate ORM/Panache, REST endpoints, and integration tests. Spring support and HTML reports
+are intentionally out of scope for now.

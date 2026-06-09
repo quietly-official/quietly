@@ -266,6 +266,7 @@ public class QuietlyReport
          json.append("    \"readyFilters\": ").append(readyFilters()).append(",\n");
          json.append("    \"readinessPercent\": ").append(format(readinessPercent())).append(",\n");
          json.append("    \"existingGeneratedTests\": ").append(generatedFilters()).append(",\n");
+         json.append("    \"generationCoveragePercent\": ").append(format(generationCoveragePercent())).append(",\n");
          json.append("    \"diagnostics\": ").append(diagnostics()).append(",\n");
          json.append("    \"problems\": ").append(problems()).append(",\n");
          appendJsonEventSummary(json);
@@ -312,6 +313,7 @@ public class QuietlyReport
          lines.add("- Ready filters: `" + readyFilters() + "`");
          lines.add("- Readiness: `" + format(readinessPercent()) + "%`");
          lines.add("- Existing generated tests: `" + generatedFilters() + "`");
+         lines.add("- Generation coverage: `" + format(generationCoveragePercent()) + "%`");
          lines.add("- Diagnostics: `" + diagnostics() + "`");
          lines.add("- Problems: `" + problems() + "`");
       }

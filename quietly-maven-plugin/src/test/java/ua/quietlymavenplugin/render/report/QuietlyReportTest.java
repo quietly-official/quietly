@@ -136,20 +136,25 @@ public class QuietlyReportTest
    }
 
    @Test
-   public void doctor_json_contains_readiness_but_not_generation_or_crud_coverage() throws Exception
+   public void doctor_json_contains_readiness_and_generation_coverage_but_not_crud_coverage() throws Exception
    {
       QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
       report.addFilter("Customer", "obj.status", "OK", "ready");
+      report.addFilter("Customer", "obj.status", "EXISTING", "generated test exists");
+      report.addFilter("Customer", "obj.name", "OK", "ready");
 
       QuietlyPluginConfig config = config();
       report.write(config);
 
+      String markdown = Files.readString(config.reportFile());
       String json = Files.readString(config.jsonReportFile());
-      assertTrue(json.contains("\"analyzedFilters\": 1"));
-      assertTrue(json.contains("\"readyFilters\": 1"));
+      assertTrue(markdown.contains("- Generation coverage: `50.00%`"));
+      assertTrue(json.contains("\"analyzedFilters\": 2"));
+      assertTrue(json.contains("\"readyFilters\": 2"));
       assertTrue(json.contains("\"readinessPercent\": 100.00"));
+      assertTrue(json.contains("\"existingGeneratedTests\": 1"));
+      assertTrue(json.contains("\"generationCoveragePercent\": 50.00"));
       assertFalse(json.contains("\"coveragePercent\""));
-      assertFalse(json.contains("\"generationCoveragePercent\""));
       assertFalse(json.contains("\"crudCoveragePercent\""));
    }
 

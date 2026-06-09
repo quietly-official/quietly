@@ -73,6 +73,7 @@ public class QuietlyProjectAnalyzerTest
       assertTrue(markdown.contains("- Ready filters: `1`"));
       assertTrue(markdown.contains("- Readiness: `50.00%`"));
       assertTrue(markdown.contains("- Existing generated tests: `0`"));
+      assertTrue(markdown.contains("- Generation coverage: `0.00%`"));
       assertTrue(markdown.contains("SKIPPED_UNRESOLVED_FIELD"));
       assertTrue(markdown.contains("MISSING_TABLE_NAME"));
    }

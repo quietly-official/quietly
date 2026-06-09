@@ -1,12 +1,13 @@
 <p align="center">
-  <img src="img/quietly_hd_dark_theme.png" style="width: 500px; border: 1px solid #ccc;" />
+  <img src="img/quietly_logo_upscaled.png" style="width: 500px; border: 1px solid #ccc;" />
 </p>
 
 ##### [BACK](../README.md)
 
 ## Cos'e Quietly
 
-Quietly e un plugin Maven per progetti Quarkus/Hibernate che genera test JUnit/RestAssured per i filtri REST basandosi sui metadati Hibernate presenti sulle entity JPA.
+Quietly e un plugin Maven per progetti Quarkus/Hibernate che genera test JUnit/RestAssured per i filtri REST basandosi
+sui metadati Hibernate presenti sulle entity JPA.
 
 In pratica:
 
@@ -126,12 +127,12 @@ In `dryRun=true`, Quietly scansiona e scrive il report, ma non crea o modifica f
 
 ### Differenza Tra I Goal
 
-| Goal | Scrive test | Scopo |
-| --- | --- | --- |
-| `quietly:scan` | No | Inventario filtri, report Markdown/JSON |
-| `quietly:doctor` | No | Diagnostica di service, campi, fixture SQL e test esistenti |
-| `quietly:filter-tests` | Si, salvo `dryRun=true` | Generazione incrementale dei test |
-| `quietly:crud-tests` | Si, salvo `dryRun=true` | Smoke test REST CRUD convenzionali |
+| Goal                   | Scrive test             | Scopo                                                       |
+|------------------------|-------------------------|-------------------------------------------------------------|
+| `quietly:scan`         | No                      | Inventario filtri, report Markdown/JSON                     |
+| `quietly:doctor`       | No                      | Diagnostica di service, campi, fixture SQL e test esistenti |
+| `quietly:filter-tests` | Si, salvo `dryRun=true` | Generazione incrementale dei test                           |
+| `quietly:crud-tests`   | Si, salvo `dryRun=true` | Smoke test REST CRUD convenzionali                          |
 
 ## Cosa Viene Generato
 
@@ -176,7 +177,8 @@ public class CustomerFiltersTest extends FilterTestBase {
 }
 ```
 
-I metodi generati hanno un marker Javadoc `@quietly-generated`. Se il metodo esiste gia ma non ha il marker, Quietly lo aggiunge alla run successiva.
+I metodi generati hanno un marker Javadoc `@quietly-generated`. Se il metodo esiste gia ma non ha il marker, Quietly lo
+aggiunge alla run successiva.
 
 ## CRUD Smoke Tests
 
@@ -211,7 +213,8 @@ public class CustomerCrudTest {
 }
 ```
 
-Per ora Quietly non genera `POST`, `PUT` o `DELETE` CRUD: servono payload validi, DTO e regole progetto-specifiche. La scelta e intenzionale per evitare test fragili o inventati.
+Per ora Quietly non genera `POST`, `PUT` o `DELETE` CRUD: servono payload validi, DTO e regole progetto-specifiche. La
+scelta e intenzionale per evitare test fragili o inventati.
 
 ## Nomi Filtro Supportati
 
@@ -247,20 +250,20 @@ customer_obj_fornitore_uuid_filter_test()
 
 ## Configurazione
 
-| Parametro | Default | Significato |
-| --- | --- | --- |
-| `basePackage` | derivato dal package entity | Package base usato nei pattern |
-| `entityPackagePattern` | convenzione legacy `.model` | Pattern package entity |
-| `servicePackagePattern` | `.services.rs` | Pattern package REST service |
-| `serviceNamePattern` | `${entitySimpleName}ServiceRs` | Pattern nome REST service |
-| `testOutputDirectory` | `src/test/java` | Directory in cui generare i test |
-| `reportFile` | `target/quietly/filters-report.md` | Report Markdown |
-| `disabledByDefault` | `false` | Se `true`, aggiunge `@Disabled` ai test generati |
-| `failOnMissingService` | `true` | Se `false`, salta entity senza service |
-| `failOnUnresolvedField` | `true` | Se `false`, salta filtri con campo non risolto |
-| `fieldResolutionMode` | `STRICT` | `STRICT` o `FUZZY` |
-| `dryRun` | `false` | Se `true`, non scrive test |
-| `failOnProblems` | `false` | Solo `quietly:doctor`: fallisce la build se trova problemi |
+| Parametro               | Default                            | Significato                                                |
+|-------------------------|------------------------------------|------------------------------------------------------------|
+| `basePackage`           | derivato dal package entity        | Package base usato nei pattern                             |
+| `entityPackagePattern`  | convenzione legacy `.model`        | Pattern package entity                                     |
+| `servicePackagePattern` | `.services.rs`                     | Pattern package REST service                               |
+| `serviceNamePattern`    | `${entitySimpleName}ServiceRs`     | Pattern nome REST service                                  |
+| `testOutputDirectory`   | `src/test/java`                    | Directory in cui generare i test                           |
+| `reportFile`            | `target/quietly/filters-report.md` | Report Markdown                                            |
+| `disabledByDefault`     | `false`                            | Se `true`, aggiunge `@Disabled` ai test generati           |
+| `failOnMissingService`  | `true`                             | Se `false`, salta entity senza service                     |
+| `failOnUnresolvedField` | `true`                             | Se `false`, salta filtri con campo non risolto             |
+| `fieldResolutionMode`   | `STRICT`                           | `STRICT` o `FUZZY`                                         |
+| `dryRun`                | `false`                            | Se `true`, non scrive test                                 |
+| `failOnProblems`        | `false`                            | Solo `quietly:doctor`: fallisce la build se trova problemi |
 
 Placeholder supportati:
 
@@ -298,19 +301,19 @@ Esempio:
 
 Stati principali:
 
-| Stato | Significato |
-| --- | --- |
-| `GENERATED` | Test generato |
-| `DISCOVERED` | Filtro scoperto da `quietly:scan` |
-| `OK` | Diagnostica positiva da `quietly:doctor` |
-| `EXISTING` | Metodo gia presente |
-| `UPDATED_MARKER` | Metodo esistente aggiornato con marker Quietly |
-| `STALE_GENERATED_TEST` | Metodo generato per un filtro non piu scoperto |
-| `SKIPPED_MISSING_SERVICE` | REST service non trovato |
-| `SKIPPED_UNRESOLVED_FIELD` | Campo filtro non risolto |
-| `MISSING_SQL_FIXTURE` | Fixture SQL attesa non trovata |
-| `MISSING_TABLE_NAME` | Entity senza costante pubblica `TABLE_NAME` |
-| `SKIPPED_INVALID_EXISTING_FILE` | File esistente non contiene la classe attesa |
+| Stato                           | Significato                                    |
+|---------------------------------|------------------------------------------------|
+| `GENERATED`                     | Test generato                                  |
+| `DISCOVERED`                    | Filtro scoperto da `quietly:scan`              |
+| `OK`                            | Diagnostica positiva da `quietly:doctor`       |
+| `EXISTING`                      | Metodo gia presente                            |
+| `UPDATED_MARKER`                | Metodo esistente aggiornato con marker Quietly |
+| `STALE_GENERATED_TEST`          | Metodo generato per un filtro non piu scoperto |
+| `SKIPPED_MISSING_SERVICE`       | REST service non trovato                       |
+| `SKIPPED_UNRESOLVED_FIELD`      | Campo filtro non risolto                       |
+| `MISSING_SQL_FIXTURE`           | Fixture SQL attesa non trovata                 |
+| `MISSING_TABLE_NAME`            | Entity senza costante pubblica `TABLE_NAME`    |
+| `SKIPPED_INVALID_EXISTING_FILE` | File esistente non contiene la classe attesa   |
 
 Quietly scrive anche il report JSON accanto al Markdown:
 
@@ -336,15 +339,19 @@ Esempio `quietly:doctor`:
     "readyFilters": 9,
     "readinessPercent": 90.0,
     "existingGeneratedTests": 8,
+    "generationCoveragePercent": 80.0,
     "diagnostics": 3,
     "problems": 1
   }
 }
 ```
 
-I conteggi sono basati sull'identita logica `(entity, capability, subject)`: piu eventi sullo stesso filtro o sulla stessa operazione non gonfiano il totale.
+I conteggi sono basati sull'identita logica `(entity, capability, subject)`: piu eventi sullo stesso filtro o sulla
+stessa operazione non gonfiano il totale.
 
-`scan` mostra esclusivamente l'inventario dei filtri. `doctor` calcola la readiness dei filtri rispetto a service e campi e riporta separatamente i test generati gia esistenti. `filter-tests` calcola invece la generation coverage.
+`scan` mostra esclusivamente l'inventario dei filtri. `doctor` calcola sia la readiness rispetto a service e campi sia
+la generation coverage basata sui test Quietly esistenti. `filter-tests` genera o aggiorna i test e riporta la copertura
+ottenuta.
 
 Una percentuale con denominatore zero vale `0.00%`, non `100%`.
 
@@ -422,12 +429,14 @@ Usa:
 
 ## Architettura
 
-| Modulo | Responsabilita |
-| --- | --- |
-| `quietly-core` | scanning entity e metadati Hibernate |
+| Modulo                 | Responsabilita                                      |
+|------------------------|-----------------------------------------------------|
+| `quietly-core`         | scanning entity e metadati Hibernate                |
 | `quietly-maven-plugin` | Mojo Maven, configurazione, generazione AST, report |
-| `quietly-test-support` | base class e helper runtime per i test generati |
+| `quietly-test-support` | base class e helper runtime per i test generati     |
 
 ## Stato Attuale
 
-Quietly e focalizzato su Quarkus/Hibernate/Panache. Include generazione test filtri, smoke test CRUD convenzionali, scan, doctor, report Markdown/JSON e rilevazione dei test generati stale. Non include ancora supporto Spring o report HTML.
+Quietly e focalizzato su Quarkus/Hibernate/Panache. Include generazione test filtri, smoke test CRUD convenzionali,
+scan, doctor, report Markdown/JSON e rilevazione dei test generati stale. Non include ancora supporto Spring o report
+HTML.

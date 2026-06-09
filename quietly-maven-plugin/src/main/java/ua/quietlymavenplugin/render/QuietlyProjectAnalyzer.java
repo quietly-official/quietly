@@ -280,6 +280,8 @@ public class QuietlyProjectAnalyzer
          log.info(Constants.QUIETLY_INFO + "Ready filters: " + report.readyFilters());
          log.info(Constants.QUIETLY_INFO + "Readiness: "
                   + String.format(java.util.Locale.ROOT, "%.2f", report.readinessPercent()) + "%");
+         log.info(Constants.QUIETLY_INFO + "Generation coverage: "
+                  + String.format(java.util.Locale.ROOT, "%.2f", report.generationCoveragePercent()) + "%");
          log.info(Constants.QUIETLY_INFO + "Problems: " + report.problems());
       }
    }

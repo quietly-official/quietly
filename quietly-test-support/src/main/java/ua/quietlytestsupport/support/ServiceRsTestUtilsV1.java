@@ -8,13 +8,12 @@ import jakarta.persistence.TypedQuery;
 import org.assertj.core.api.SoftAssertions;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,8 +103,25 @@ public abstract class ServiceRsTestUtilsV1
     */
    protected <T> List<T> get_response_body_as_list_of(Response response, Class<T> clazz)
    {
-      Class<T[]> arrayType = (Class<T[]>) Array.newInstance(clazz, 0).getClass();
-      return Arrays.asList(response.getBody().as(arrayType));
+      Object root = response.jsonPath().get("$");
+      if (root instanceof List<?>)
+      {
+         return response.jsonPath().getList("$", clazz);
+      }
+      if (root instanceof Map<?, ?> map)
+      {
+         if (map.get("items") instanceof List<?>)
+         {
+            return response.jsonPath().getList("items", clazz);
+         }
+         if (map.get("content") instanceof List<?>)
+         {
+            return response.jsonPath().getList("content", clazz);
+         }
+      }
+      throw new IllegalStateException(
+               "La risposta JSON non contiene un array diretto ne un wrapper 'items' o 'content'."
+      );
    }
 
    /**
