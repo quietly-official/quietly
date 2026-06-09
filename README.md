@@ -29,6 +29,7 @@ Quick usage in another project:
 mvn compile quietly:scan
 mvn compile quietly:doctor
 mvn compile quietly:filter-tests
+mvn compile quietly:crud-tests
 ```
 
 Recommended first run:
@@ -36,12 +37,15 @@ Recommended first run:
 1. Run `quietly:scan` to inventory filters.
 2. Run `quietly:doctor` to find missing services, unresolved fields, fixtures, and stale generated tests.
 3. Run `quietly:filter-tests` once the report looks sane.
+4. Run `quietly:crud-tests` to generate baseline REST CRUD smoke tests for conventional services.
 
 Generated tests are active by default, idempotent, and reported in both Markdown and JSON:
 
 ```text
 target/quietly/filters-report.md
 target/quietly/filters-report.json
+target/quietly/crud-report.md
+target/quietly/crud-report.json
 ```
 
 Current scope: Quarkus, Hibernate ORM/Panache, REST endpoints, and integration tests. Spring support and HTML reports are intentionally out of scope for now.

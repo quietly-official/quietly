@@ -16,6 +16,7 @@ It currently:
 - resolves the expected REST service
 - diagnoses missing prerequisites
 - creates or updates `*FiltersTest` classes
+- generates conventional CRUD smoke tests in `*CrudTest` classes
 - adds only missing tests
 - writes Markdown and JSON reports
 
@@ -103,6 +104,12 @@ Generate or update tests:
 mvn compile quietly:filter-tests
 ```
 
+Generate or update REST CRUD smoke tests:
+
+```bash
+mvn compile quietly:crud-tests
+```
+
 Run without writing test files:
 
 ```xml
@@ -124,6 +131,7 @@ With `dryRun=true`, Quietly scans the project and writes the report, but does no
 | `quietly:scan` | No | Filter inventory, Markdown/JSON report |
 | `quietly:doctor` | No | Diagnostics for services, fields, SQL fixtures and existing generated tests |
 | `quietly:filter-tests` | Yes, unless `dryRun=true` | Incremental test generation |
+| `quietly:crud-tests` | Yes, unless `dryRun=true` | Conventional REST CRUD smoke tests |
 
 ## Generated Output
 
@@ -169,6 +177,41 @@ public class CustomerFiltersTest extends FilterTestBase {
 ```
 
 Generated methods include a `@quietly-generated` Javadoc marker. If a matching method already exists without the marker, Quietly adds it on the next run.
+
+## CRUD Smoke Tests
+
+`quietly:crud-tests` generates a separate `*CrudTest` class for entities with a resolved REST service.
+
+The first version generates baseline tests for conventional REST endpoints:
+
+- collection `GET`: expects `200`
+- `GET /{id}` with a missing id: expects `404`
+
+Example:
+
+```java
+@QuarkusTest
+@TestHTTPEndpoint(CustomerServiceRs.class)
+public class CustomerCrudTest {
+
+    /**
+     * @quietly-generated crud="list"
+     */
+    @Test
+    @TestSecurity(user = "test")
+    public void list_endpoint_returns_success_test() {
+        Response response = RestAssured.given()
+                .when()
+                .get()
+                .then()
+                .extract()
+                .response();
+        Assertions.assertEquals(200, response.statusCode());
+    }
+}
+```
+
+Quietly does not generate CRUD `POST`, `PUT`, or `DELETE` tests yet: those need valid payloads, DTO knowledge, and project-specific rules. This is intentional to avoid fragile or invented tests.
 
 ## Supported Filter Names
 
@@ -275,6 +318,13 @@ Quietly also writes a JSON report next to the Markdown report:
 target/quietly/filters-report.json
 ```
 
+For `quietly:crud-tests`, when `reportFile` is not configured, the default report is:
+
+```text
+target/quietly/crud-report.md
+target/quietly/crud-report.json
+```
+
 The JSON report includes a CI/script-friendly summary:
 
 ```json
@@ -311,6 +361,7 @@ Quietly is designed to be run repeatedly:
 - it adds `beforeEach()` when missing
 - it adds the `@quietly-generated` marker to recognized existing methods
 - it reports generated methods for removed filters as `STALE_GENERATED_TEST`
+- it keeps filter tests `*FiltersTest` and CRUD tests `*CrudTest` separate
 
 ## Troubleshooting
 
@@ -368,4 +419,4 @@ Use:
 
 ## Current Scope
 
-Quietly is focused on Quarkus/Hibernate/Panache. It includes filter test generation, scan, doctor, Markdown/JSON reports, and stale generated test detection. It does not currently include Spring support or HTML reports.
+Quietly is focused on Quarkus/Hibernate/Panache. It includes filter test generation, conventional CRUD smoke tests, scan, doctor, Markdown/JSON reports, and stale generated test detection. It does not currently include Spring support or HTML reports.

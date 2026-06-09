@@ -8,6 +8,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import ua.quietlycore.model.FilterEntityInfo;
+import ua.quietlycore.scan.EntityScanOptions;
 import ua.quietlycore.scan.FilterScanner;
 import ua.quietlymavenplugin.render.FilterTestsCodeGenerator;
 import ua.quietlymavenplugin.render.config.Constants;
@@ -87,7 +88,8 @@ public class FilterTestsGeneratorMojo extends AbstractMojo {
          List<FilterEntityInfo> entitiesFilters =
                   FilterScanner.scanProjectEntities(
                            project.getCompileClasspathElements(),
-                           project.getBuild().getOutputDirectory());
+                           project.getBuild().getOutputDirectory(),
+                           EntityScanOptions.filteredApplicationEntities(config.entityPackagePatternForScan()));
 
          FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(getLog(), project, config);
          generator.generateFilterTests(entitiesFilters);

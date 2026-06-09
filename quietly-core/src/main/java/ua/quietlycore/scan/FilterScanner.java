@@ -20,16 +20,31 @@ public class FilterScanner {
             List<String> classpathElements,
             String outputDir
    ) throws Exception {
+      return scanProjectEntities(
+               classpathElements,
+               outputDir,
+               EntityScanOptions.allApplicationEntities(null)
+      );
+   }
 
-      List<URL> urls = new ArrayList<>();
-      urls.add(new File(outputDir).toURI().toURL());
+   public static List<FilterEntityInfo> scanProjectEntities(
+            List<String> classpathElements,
+            String outputDir,
+            EntityScanOptions options
+   ) throws Exception {
+      URL projectOutputUrl = new File(outputDir).toURI().toURL();
+      List<URL> classLoaderUrls = new ArrayList<>();
+      classLoaderUrls.add(projectOutputUrl);
 
       for (String element : classpathElements) {
-         urls.add(new File(element).toURI().toURL());
+         URL url = new File(element).toURI().toURL();
+         if (!classLoaderUrls.contains(url)) {
+            classLoaderUrls.add(url);
+         }
       }
 
       URLClassLoader projectCl = new URLClassLoader(
-               urls.toArray(new URL[0]),
+               classLoaderUrls.toArray(new URL[0]),
                Thread.currentThread().getContextClassLoader()
       );
 
@@ -39,7 +54,8 @@ public class FilterScanner {
       try {
          Reflections reflections = new Reflections(
                   new ConfigurationBuilder()
-                           .setUrls(urls)
+                           .setUrls(projectOutputUrl)
+                           .addClassLoaders(projectCl)
                            .setScanners(Scanners.TypesAnnotated)
          );
 
@@ -48,7 +64,13 @@ public class FilterScanner {
          List<FilterEntityInfo> result = new ArrayList<>();
 
          for (Class<?> entity : entities) {
+            if (!options.matchesPackage(entity)) {
+               continue;
+            }
             List<FilterInfo> filters = scanEntity(entity);
+            if (options.requireHibernateFilters() && filters.isEmpty()) {
+               continue;
+            }
             result.add(new FilterEntityInfo(entity, filters));
          }
 

@@ -112,6 +112,21 @@ public class QuietlyPluginConfig {
       return fieldResolutionMode;
    }
 
+   public String entityPackagePatternForScan() {
+      if (entityPackagePattern == null) {
+         return null;
+      }
+      if (!entityPackagePattern.contains("${basePackage}")) {
+         return entityPackagePattern;
+      }
+      if (basePackage == null) {
+         throw new IllegalArgumentException(
+                  "entityPackagePattern uses ${basePackage}, but basePackage is not configured."
+         );
+      }
+      return entityPackagePattern.replace("${basePackage}", basePackage);
+   }
+
    public String resolveRootPackage(Class<?> entityClass) {
       String entityPackage = entityClass.getPackageName();
       if (entityPackagePattern != null) {
