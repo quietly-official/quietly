@@ -14,7 +14,7 @@ Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities,
 `@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST
 filters.
 
-Current development coordinates use groupId `io.github.quietly-official` and version `0.1.0-SNAPSHOT`.
+The first beta release candidate uses groupId `io.github.quietly-official` and version `0.1.0-beta.1`.
 
 Start here:
 

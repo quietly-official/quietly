@@ -34,9 +34,9 @@ mvn clean install
 Questo installa nel repository Maven locale:
 
 ```text
-io.github.quietly-official:quietly-core:0.1.0-SNAPSHOT
-io.github.quietly-official:quietly-test-support:0.1.0-SNAPSHOT
-io.github.quietly-official:quietly-maven-plugin:0.1.0-SNAPSHOT
+io.github.quietly-official:quietly-core:0.1.0-beta.1
+io.github.quietly-official:quietly-test-support:0.1.0-beta.1
+io.github.quietly-official:quietly-maven-plugin:0.1.0-beta.1
 ```
 
 ## Setup Nel Progetto Target
@@ -47,7 +47,7 @@ Aggiungi il supporto runtime ai test:
 <dependency>
     <groupId>io.github.quietly-official</groupId>
     <artifactId>quietly-test-support</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0-beta.1</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -60,7 +60,7 @@ Aggiungi il plugin:
         <plugin>
             <groupId>io.github.quietly-official</groupId>
             <artifactId>quietly-maven-plugin</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>0.1.0-beta.1</version>
             <executions>
                 <execution>
                     <id>generate-quietly-filter-tests</id>

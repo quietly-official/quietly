@@ -29,6 +29,15 @@ The normal build never requires GPG or Central credentials:
 The `release` profile only attaches sources and Javadoc. The separate `central-release` profile enables GPG signing
 and the Central Publishing Maven Plugin.
 
+To rehearse signing without uploading anything, run:
+
+```bash
+./mvnw -B -ntp -Prelease,central-release -DskipTests verify
+```
+
+`verify` runs GPG signing but does not invoke Maven's deploy phase. Confirm that `.asc` files exist beside the parent
+POM and every module POM, main JAR, sources JAR and Javadoc JAR.
+
 For a local release rehearsal, configure the environment without putting secrets in the POM:
 
 ```bash
@@ -49,8 +58,8 @@ The command that uploads a release bundle is:
 This command uploads and validates the bundle but does not publish it automatically because `autoPublish` is disabled.
 After validation, inspect the deployment in the Central Portal and publish it manually.
 
-Do not run the upload command while the project version is `0.1.0-SNAPSHOT`. Change the version only as part of an
-explicit release preparation and verify that the matching Git tag and source tree are final.
+Do not run the upload command from a snapshot or unreviewed source tree. The `0.1.0-beta.1` release must come from the
+exact commit tagged `v0.1.0-beta.1`.
 
 ## GitHub Actions
 
@@ -67,13 +76,33 @@ Configure these repository secrets:
 
 Never store these values in source files, Maven properties, workflow inputs or command-line arguments.
 
-## Release 0.1.0 Checklist
+## Beta API Boundary
+
+The Java package names remain under `ua.quietly...` for `0.1.0-beta.1`. This is an intentional beta decision and is
+independent from the Maven groupId `io.github.quietly-official`.
+
+Consumer-facing API:
+
+- `ua.quietlytestsupport.support.FilterTestBase`: base class used by generated filter tests.
+- `ua.quietlytestsupport.support.ServiceRsTestUtilsV1`: reusable REST/filter test utilities.
+- `ua.quietlytestsupport.support.SqlUtils`: SQL fixture loader used by generated and handwritten tests.
+
+The Maven goals are the supported interface of `quietly-maven-plugin`. Its Mojo, renderer, configuration, report,
+JavaParser DSL and adapter classes are public for Maven integration or implementation convenience, but are not a
+stable Java API for consumers. `quietly-core` scanner and metadata classes currently support the plugin internals and
+carry no compatibility guarantee during the beta series.
+
+A package rename or a stricter exported/internal API split may be evaluated after the beta. It must not be performed
+silently because generated sources directly import the current test-support packages.
+
+## Release 0.1.0-beta.1 Checklist
 
 1. Confirm the main CI and `quietly-demo` consumer build are green.
-2. Replace `0.1.0-SNAPSHOT` with `0.1.0` in a dedicated release change.
+2. Confirm that the Central namespace `io.github.quietly-official` has been approved.
 3. Run the local verification commands.
-4. Create and review the `v0.1.0` tag from the exact release commit.
-5. Run the manual `Release` workflow with upload disabled and inspect its artifacts.
-6. Run it again with upload enabled only after namespace, token and GPG checks are complete.
-7. Inspect the validated deployment in Central Portal and publish it manually.
-8. Restore the next development version after the release.
+4. Complete the signing rehearsal and inspect every expected `.asc` file.
+5. Create and review the `v0.1.0-beta.1` tag from the exact release commit.
+6. Run the manual `Release` workflow with upload disabled and inspect its artifacts.
+7. Run it again with upload enabled only after namespace, token and GPG checks are complete.
+8. Inspect the validated deployment in Central Portal and publish it manually.
+9. Restore the next development version after the release.

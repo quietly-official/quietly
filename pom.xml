@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.quietly-official</groupId>
     <artifactId>quietly-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0-beta.1</version>
     <packaging>pom</packaging>
 
     <name>Quietly</name>
@@ -38,7 +38,7 @@
         <connection>scm:git:https://github.com/quietly-official/quietly.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/quietly-official/quietly.git</developerConnection>
         <url>https://github.com/quietly-official/quietly</url>
-        <tag>HEAD</tag>
+        <tag>v0.1.0-beta.1</tag>
     </scm>
 
     <modules>

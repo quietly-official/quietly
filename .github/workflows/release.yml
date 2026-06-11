@@ -33,6 +33,41 @@ jobs:
           java-version: "17"
           cache: maven
 
+      - name: Validate release ref and version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          VERSION="$(./mvnw -q -DforceStdout help:evaluate -Dexpression=project.version)"
+
+          case "$REF_TYPE" in
+            branch)
+              if [ "$REF_NAME" != "main" ]; then
+                echo "::error::Release validation is allowed only from main or a v* tag. Current ref: $REF_NAME"
+                exit 1
+              fi
+              ;;
+            tag)
+              case "$REF_NAME" in
+                v*) ;;
+                *)
+                  echo "::error::Release tags must start with v. Current tag: $REF_NAME"
+                  exit 1
+                  ;;
+              esac
+
+              TAG_VERSION="${REF_NAME#v}"
+              if [ "$VERSION" != "$TAG_VERSION" ]; then
+                echo "::error::Maven version $VERSION does not match tag $REF_NAME"
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Unsupported release ref type: $REF_TYPE"
+              exit 1
+              ;;
+          esac
+
       - name: Verify normal build
         run: ./mvnw -B -ntp clean verify
 
@@ -56,6 +91,25 @@ jobs:
           case "$VERSION" in
             *-SNAPSHOT) echo "Refusing to upload snapshot version $VERSION"; exit 1 ;;
           esac
+
+      - name: Validate publication credentials
+        if: inputs.upload_to_central
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          missing=""
+          for name in CENTRAL_USERNAME CENTRAL_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            if [ -z "${!name}" ]; then
+              missing="$missing $name"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required release secrets:$missing"
+            exit 1
+          fi
 
       - name: Configure Central and GPG credentials
         if: inputs.upload_to_central
