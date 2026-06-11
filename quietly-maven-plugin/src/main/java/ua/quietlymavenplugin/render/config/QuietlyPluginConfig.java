@@ -78,9 +78,9 @@ public class QuietlyPluginConfig
    {
       if (testOutputDirectory != null)
       {
-         return testOutputDirectory.toPath();
+         return resolveAgainstProject(testOutputDirectory.toPath());
       }
-      return new File(project.getBasedir(), "src/test/java").toPath();
+      return buildDirectory().resolve("generated-test-sources/quietly");
    }
 
    public boolean disabledByDefault()
@@ -92,12 +92,9 @@ public class QuietlyPluginConfig
    {
       if (reportFile != null)
       {
-         return reportFile.toPath();
+         return resolveAgainstProject(reportFile.toPath());
       }
-      String buildDirectory = project.getBuild() == null || project.getBuild().getDirectory() == null
-               ? new File(project.getBasedir(), "target").getPath()
-               : project.getBuild().getDirectory();
-      return new File(buildDirectory, "quietly/filters-report.md").toPath();
+      return buildDirectory().resolve("quietly/filters-report.md");
    }
 
    public Path jsonReportFile()
@@ -215,5 +212,23 @@ public class QuietlyPluginConfig
       return entityPackage.endsWith(".model")
                ? entityPackage.substring(0, entityPackage.lastIndexOf(".model"))
                : entityPackage;
+   }
+
+   private Path buildDirectory()
+   {
+      String configuredBuildDirectory = project.getBuild() == null ? null : project.getBuild().getDirectory();
+      Path buildPath = configuredBuildDirectory == null || configuredBuildDirectory.isBlank()
+               ? Path.of("target")
+               : Path.of(configuredBuildDirectory);
+      return resolveAgainstProject(buildPath);
+   }
+
+   private Path resolveAgainstProject(Path path)
+   {
+      if (path.isAbsolute())
+      {
+         return path.normalize();
+      }
+      return project.getBasedir().toPath().resolve(path).toAbsolutePath().normalize();
    }
 }

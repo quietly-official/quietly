@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_central:
+        description: Upload a signed bundle to Central for manual publication
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Verify and prepare release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Verify normal build
+        run: ./mvnw -B -ntp clean verify
+
+      - name: Build release artifacts
+        run: ./mvnw -B -ntp -Prelease clean verify
+
+      - name: Upload release candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: quietly-release-candidates
+          path: |
+            quietly-core/target/*.jar
+            quietly-test-support/target/*.jar
+            quietly-maven-plugin/target/*.jar
+          if-no-files-found: error
+
+      - name: Reject snapshot publication
+        if: inputs.upload_to_central
+        run: |
+          VERSION="$(./mvnw -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          case "$VERSION" in
+            *-SNAPSHOT) echo "Refusing to upload snapshot version $VERSION"; exit 1 ;;
+          esac
+
+      - name: Configure Central and GPG credentials
+        if: inputs.upload_to_central
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Upload signed bundle for manual publication
+        if: inputs.upload_to_central
+        run: ./mvnw -B -ntp -Prelease,central-release -DskipTests deploy
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

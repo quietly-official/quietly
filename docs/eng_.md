@@ -34,9 +34,9 @@ mvn clean install
 This installs:
 
 ```text
-ua.quietly:quietly-core:1.0
-ua.quietly:quietly-test-support:1.0
-ua.quietly:quietly-maven-plugin:1.0
+io.github.quietly-official:quietly-core:0.1.0-SNAPSHOT
+io.github.quietly-official:quietly-test-support:0.1.0-SNAPSHOT
+io.github.quietly-official:quietly-maven-plugin:0.1.0-SNAPSHOT
 ```
 
 ## Target Project Setup
@@ -45,9 +45,9 @@ Add the test runtime support:
 
 ```xml
 <dependency>
-    <groupId>ua.quietly</groupId>
+    <groupId>io.github.quietly-official</groupId>
     <artifactId>quietly-test-support</artifactId>
-    <version>1.0</version>
+    <version>0.1.0-SNAPSHOT</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -58,9 +58,18 @@ Add the Maven plugin:
 <build>
     <plugins>
         <plugin>
-            <groupId>ua.quietly</groupId>
+            <groupId>io.github.quietly-official</groupId>
             <artifactId>quietly-maven-plugin</artifactId>
-            <version>1.0</version>
+            <version>0.1.0-SNAPSHOT</version>
+            <executions>
+                <execution>
+                    <id>generate-quietly-filter-tests</id>
+                    <phase>generate-test-sources</phase>
+                    <goals>
+                        <goal>filter-tests</goal>
+                    </goals>
+                </execution>
+            </executions>
             <configuration>
                 <basePackage>com.acme</basePackage>
                 <entityPackagePattern>${basePackage}.entities</entityPackagePattern>
@@ -78,6 +87,19 @@ Add the Maven plugin:
     </plugins>
 </build>
 ```
+
+With this lifecycle binding, plain Maven runs generate, compile, and execute Quietly tests:
+
+```bash
+mvn test
+```
+
+The default output is `target/generated-test-sources/quietly`. The `filter-tests` Mojo registers that directory with
+`project.addTestCompileSourceRoot(...)`, so Maven test compilation sees it later in the same lifecycle.
+
+Direct split invocations do not preserve the in-memory `MavenProject` source roots between Maven processes. For example,
+`mvn compile quietly:filter-tests` followed by a separate `mvn test` may leave the generated directory outside the
+second build's test source roots. Bind the plugin to `generate-test-sources` as shown above for normal use.
 
 ## Commands
 
@@ -99,7 +121,7 @@ To fail the build when `doctor` finds problems:
 <failOnProblems>true</failOnProblems>
 ```
 
-Generate or update tests:
+Generate or update tests directly in the current Maven invocation:
 
 ```bash
 mvn compile quietly:filter-tests
@@ -250,20 +272,20 @@ customer_obj_fornitore_uuid_filter_test()
 
 ## Configuration
 
-| Parameter               | Default                            | Meaning                                                                   |
-|-------------------------|------------------------------------|---------------------------------------------------------------------------|
-| `basePackage`           | derived from the entity package    | Base package used by patterns                                             |
-| `entityPackagePattern`  | legacy `.model` convention         | Entity package pattern                                                    |
-| `servicePackagePattern` | `.services.rs`                     | REST service package pattern                                              |
-| `serviceNamePattern`    | `${entitySimpleName}ServiceRs`     | REST service name pattern                                                 |
-| `testOutputDirectory`   | `src/test/java`                    | Test generation directory                                                 |
-| `reportFile`            | `target/quietly/filters-report.md` | Markdown report path                                                      |
-| `disabledByDefault`     | `false`                            | Adds `@Disabled` to generated tests when `true`                           |
-| `failOnMissingService`  | `true`                             | Fails when a REST service is missing                                      |
-| `failOnUnresolvedField` | `true`                             | Fails when a filter field cannot be resolved                              |
-| `fieldResolutionMode`   | `STRICT`                           | `STRICT` or `FUZZY`                                                       |
-| `dryRun`                | `false`                            | Does not write test files when `true`                                     |
-| `failOnProblems`        | `false`                            | Only for `quietly:doctor`: fails the build when diagnostics find problems |
+| Parameter               | Default                                 | Meaning                                                                   |
+|-------------------------|-----------------------------------------|---------------------------------------------------------------------------|
+| `basePackage`           | derived from the entity package         | Base package used by patterns                                             |
+| `entityPackagePattern`  | legacy `.model` convention              | Entity package pattern                                                    |
+| `servicePackagePattern` | `.services.rs`                          | REST service package pattern                                              |
+| `serviceNamePattern`    | `${entitySimpleName}ServiceRs`          | REST service name pattern                                                 |
+| `testOutputDirectory`   | `target/generated-test-sources/quietly` | Test generation directory                                                 |
+| `reportFile`            | `target/quietly/filters-report.md`      | Markdown report path                                                      |
+| `disabledByDefault`     | `false`                                 | Adds `@Disabled` to generated tests when `true`                           |
+| `failOnMissingService`  | `true`                                  | Fails when a REST service is missing                                      |
+| `failOnUnresolvedField` | `true`                                  | Fails when a filter field cannot be resolved                              |
+| `fieldResolutionMode`   | `STRICT`                                | `STRICT` or `FUZZY`                                                       |
+| `dryRun`                | `false`                                 | Does not write test files when `true`                                     |
+| `failOnProblems`        | `false`                                 | Only for `quietly:doctor`: fails the build when diagnostics find problems |
 
 Supported placeholders:
 
@@ -304,6 +326,7 @@ Main statuses:
 | Status                          | Meaning                                                    |
 |---------------------------------|------------------------------------------------------------|
 | `GENERATED`                     | Test method generated                                      |
+| `WOULD_GENERATE`                | Test is generatable but was not written in dry-run         |
 | `DISCOVERED`                    | Filter discovered by `quietly:scan`                        |
 | `OK`                            | Positive diagnostic from `quietly:doctor`                  |
 | `EXISTING`                      | Method already exists                                      |
@@ -335,13 +358,18 @@ Example for `quietly:doctor`:
 ```json
 {
   "summary": {
-    "analyzedFilters": 10,
-    "readyFilters": 9,
-    "readinessPercent": 90.0,
-    "existingGeneratedTests": 8,
-    "generationCoveragePercent": 80.0,
+    "discoveredFilters": 10,
+    "generatableFilters": 9,
+    "blockedFilters": 1,
+    "generationReadinessPercent": 90.0,
+    "generatedTestClasses": 3,
+    "generatedTestMethods": 8,
     "diagnostics": 3,
     "problems": 1
+  },
+  "execution": {
+    "status": "NOT_MEASURED",
+    "measuredByQuietly": false
   }
 }
 ```
@@ -349,8 +377,25 @@ Example for `quietly:doctor`:
 Counts use the logical identity `(entity, capability, subject)`, so multiple events for the same filter or operation do
 not inflate totals.
 
-`scan` only reports the filter inventory. `doctor` calculates both readiness against services and fields and generation
-coverage from existing Quietly tests. `filter-tests` generates or updates tests and reports the resulting coverage.
+The filter report separates discovery, generation readiness and generated artifacts:
+
+- `discoveredFilters`: Hibernate filters found on entities;
+- `generatableFilters`: filters whose service and field prerequisites can be resolved;
+- `blockedFilters`: filters blocked by missing or ambiguous prerequisites;
+- `generationReadinessPercent`: generatable filters divided by discovered filters;
+- `generatedTestClasses` and `generatedTestMethods`: Quietly test artifacts found or produced.
+
+Quietly does not measure whether generated tests were executed or passed. Runtime execution remains `NOT_MEASURED`
+unless Maven/Surefire result integration is added explicitly. Surefire reports and the Maven build result are the
+source of truth for runtime pass/fail.
+
+For backward compatibility, applicable JSON reports may still contain `coveragePercent`,
+`generationCoveragePercent`, `filterCoveragePercent`, `readinessPercent`, and `existingGeneratedTests`. These fields
+are legacy/deprecated and must not be interpreted as runtime test coverage.
+
+`scan` only reports the filter inventory and does not evaluate generation readiness. `doctor` evaluates generation
+prerequisites and recognizes existing Quietly-generated methods. `filter-tests` generates or updates tests and reports
+generation readiness and generated artifacts.
 
 A percentage with a zero denominator is `0.00%`, not `100%`.
 

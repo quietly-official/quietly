@@ -118,9 +118,9 @@ public class FilterTestsCodeGeneratorTest
       assertTrue(exception.getMessage().contains("Configure servicePackagePattern/serviceNamePattern"));
 
       String report = Files.readString(config.reportFile());
-      assertTrue(report.contains("- Total filters: `1`"));
-      assertTrue(report.contains("- Covered filters: `0`"));
-      assertTrue(report.contains("- Generation coverage: `0.00%`"));
+      assertTrue(report.contains("- Discovered filters: `1`"));
+      assertTrue(report.contains("- Generatable filters: `0`"));
+      assertTrue(report.contains("- Generation readiness: `0.00%`"));
       assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | SKIPPED_MISSING_SERVICE |"));
    }
 
@@ -167,8 +167,8 @@ public class FilterTestsCodeGeneratorTest
 
       String report = Files.readString(config.reportFile());
       assertTrue(report.contains("# Quietly Filter Generation Report"));
-      assertTrue(report.contains("- Total filters: `1`"));
-      assertTrue(report.contains("- Covered filters: `1`"));
+      assertTrue(report.contains("- Discovered filters: `1`"));
+      assertTrue(report.contains("- Generated test methods: `1`"));
       assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | GENERATED |"));
 
       String jsonReport = Files.readString(config.jsonReportFile());
@@ -229,7 +229,11 @@ public class FilterTestsCodeGeneratorTest
       generator.generateFilterTests(List.of(new FilterEntityInfo(Customer.class, List.of(filter("obj", "status")))));
 
       assertFalse(Files.exists(config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java")));
-      assertTrue(Files.readString(config.reportFile()).contains("- Dry run: `true`"));
+      String report = Files.readString(config.reportFile());
+      assertTrue(report.contains("- Dry run: `true`"));
+      assertTrue(report.contains("- Generatable filters: `1`"));
+      assertTrue(report.contains("- Generated test methods: `0`"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | WOULD_GENERATE |"));
    }
 
    private Path generate(boolean disabledByDefault) throws Exception

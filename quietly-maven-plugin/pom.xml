@@ -3,34 +3,43 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>ua.quietly</groupId>
-        <artifactId>quietly-prototype</artifactId>
-        <version>1.0</version>
+        <groupId>io.github.quietly-official</groupId>
+        <artifactId>quietly-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <packaging>maven-plugin</packaging>
 
     <artifactId>quietly-maven-plugin</artifactId>
 
+    <prerequisites>
+        <maven>${maven.version}</maven>
+    </prerequisites>
+
     <dependencies>
         <!-- DEPENDENCY DAL MODULO CORE -->
         <dependency>
-            <groupId>ua.quietly</groupId>
+            <groupId>io.github.quietly-official</groupId>
             <artifactId>quietly-core</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <!-- Plugin-realm dependency; not added to the consumer project's runtime classpath. -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
         </dependency>
         <!-- API base dei plugin -->
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
-            <version>3.9.11</version>
+            <version>${maven.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- OGGETTI CORE -->
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>3.9.11</version>
+            <version>${maven.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Annotazioni @Mojo ecc... -->

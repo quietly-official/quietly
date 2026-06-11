@@ -27,6 +27,10 @@ public class QuietlyPluginConfigTest
       assertTrue(config.failOnMissingService());
       assertTrue(config.failOnUnresolvedField());
       assertEquals(FieldResolutionMode.STRICT, config.fieldResolutionMode());
+      assertEquals(
+               project.getBasedir().toPath().resolve("target/generated-test-sources/quietly").normalize(),
+               config.testOutputDirectory()
+      );
    }
 
    @Test

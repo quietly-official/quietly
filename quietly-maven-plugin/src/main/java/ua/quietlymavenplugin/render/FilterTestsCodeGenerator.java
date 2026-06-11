@@ -232,7 +232,9 @@ public class FilterTestsCodeGenerator
                   config.fieldResolutionMode(),
                   config.disabledByDefault()
          ));
-         report.addFilter(entityClass.getSimpleName(), filterName(filter), "GENERATED", "Generated test method.");
+         String status = config.dryRun() ? "WOULD_GENERATE" : "GENERATED";
+         String details = config.dryRun() ? "Would generate test method." : "Generated test method.";
+         report.addFilter(entityClass.getSimpleName(), filterName(filter), status, details);
          return true;
       }
       catch (QuietlyGenerationException e)

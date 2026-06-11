@@ -278,10 +278,10 @@ public class QuietlyProjectAnalyzer
       if (report.type() == ReportType.PROJECT_DIAGNOSTICS)
       {
          log.info(Constants.QUIETLY_INFO + "Ready filters: " + report.readyFilters());
-         log.info(Constants.QUIETLY_INFO + "Readiness: "
-                  + String.format(java.util.Locale.ROOT, "%.2f", report.readinessPercent()) + "%");
-         log.info(Constants.QUIETLY_INFO + "Generation coverage: "
-                  + String.format(java.util.Locale.ROOT, "%.2f", report.generationCoveragePercent()) + "%");
+         log.info(Constants.QUIETLY_INFO + "Generation readiness: "
+                  + String.format(java.util.Locale.ROOT, "%.2f", report.generationReadinessPercent()) + "%");
+         log.info(Constants.QUIETLY_INFO + "Generated test methods found: " + report.generatedTestMethods());
+         log.info(Constants.QUIETLY_INFO + "Execution: not measured by Quietly");
          log.info(Constants.QUIETLY_INFO + "Problems: " + report.problems());
       }
    }

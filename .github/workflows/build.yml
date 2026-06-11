@@ -36,10 +36,10 @@ jobs:
       - name: Show tool versions
         run: |
           java -version
-          mvn --version
+          ./mvnw --version
 
       - name: Build and test
-        run: mvn -B -ntp clean verify
+        run: ./mvnw -B -ntp clean verify
 
       - name: Upload test reports
         if: always()
@@ -59,3 +59,68 @@ jobs:
             quietly-test-support/target/*.jar
             quietly-maven-plugin/target/*.jar
           if-no-files-found: error
+
+  integration-demo:
+    name: Consumer lifecycle integration
+    needs: maven
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Quietly change under test
+        uses: actions/checkout@v4
+        with:
+          path: quietly
+
+      - name: Verify integration repository token
+        env:
+          DEMO_TOKEN: ${{ secrets.QUIETLY_INTEGRATION_DEMO_TOKEN }}
+        run: test -n "$DEMO_TOKEN"
+
+      - name: Checkout integration demo
+        uses: actions/checkout@v4
+        with:
+          repository: quietly-official/quietly-demo
+          ref: main
+          path: quietly-demo
+          token: ${{ secrets.QUIETLY_INTEGRATION_DEMO_TOKEN }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: |
+            quietly/pom.xml
+            quietly-demo/pom.xml
+
+      - name: Install Quietly change under test
+        working-directory: quietly
+        run: ./mvnw -B -ntp install -DskipTests
+
+      - name: Generate, compile and run consumer tests
+        working-directory: quietly-demo
+        run: mvn -B -ntp clean test -Dquietly.version=0.1.0-SNAPSHOT
+
+      - name: Verify generated test execution evidence
+        working-directory: quietly-demo
+        run: |
+          test -f target/generated-test-sources/quietly/com/acme/quietlydemo/CustomerFiltersTest.java
+          test -f target/surefire-reports/TEST-com.acme.quietlydemo.CustomerFiltersTest.xml
+          grep -q 'name="obj_status_filter_test"' target/surefire-reports/TEST-com.acme.quietlydemo.CustomerFiltersTest.xml
+
+      - name: Upload integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quietly-consumer-integration
+          path: |
+            quietly-demo/target/generated-test-sources/quietly/**
+            quietly-demo/target/surefire-reports/**
+            quietly-demo/target/quietly/**
+          if-no-files-found: warn

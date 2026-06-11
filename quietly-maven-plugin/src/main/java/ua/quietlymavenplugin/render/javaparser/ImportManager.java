@@ -92,7 +92,7 @@ public class ImportManager
    }
 
    /**
-    * Converte Class<?> in ClassOrInterfaceType e aggiunge l'import
+    * Converte {@code Class<?>} in {@code ClassOrInterfaceType} e aggiunge l'import.
     */
    public ClassOrInterfaceType class_type(Class<?> clazz)
    {

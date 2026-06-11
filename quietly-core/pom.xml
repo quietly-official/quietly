@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>ua.quietly</groupId>
-        <artifactId>quietly-prototype</artifactId>
-        <version>1.0</version>
+        <groupId>io.github.quietly-official</groupId>
+        <artifactId>quietly-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>quietly-core</artifactId>
@@ -26,12 +26,7 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>6.3.0.Final</version>
-        </dependency>
-        <!-- HIBERNATE ORM PANACHE -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-hibernate-orm-panache</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- TESTS -->
         <dependency>

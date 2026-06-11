@@ -69,11 +69,11 @@ public class QuietlyProjectAnalyzerTest
 
       String markdown = Files.readString(config.reportFile());
       assertTrue(markdown.contains("# Quietly Project Diagnostics Report"));
-      assertTrue(markdown.contains("- Analyzed filters: `2`"));
-      assertTrue(markdown.contains("- Ready filters: `1`"));
-      assertTrue(markdown.contains("- Readiness: `50.00%`"));
-      assertTrue(markdown.contains("- Existing generated tests: `0`"));
-      assertTrue(markdown.contains("- Generation coverage: `0.00%`"));
+      assertTrue(markdown.contains("- Discovered filters: `2`"));
+      assertTrue(markdown.contains("- Generatable filters: `1`"));
+      assertTrue(markdown.contains("- Generation readiness: `50.00%`"));
+      assertTrue(markdown.contains("- Generated test methods: `0`"));
+      assertTrue(markdown.contains("- Execution: `NOT_MEASURED`"));
       assertTrue(markdown.contains("SKIPPED_UNRESOLVED_FIELD"));
       assertTrue(markdown.contains("MISSING_TABLE_NAME"));
    }

@@ -15,7 +15,12 @@ public class QuietlyReport
 
    private static final Set<String> GENERATED_STATUSES =
             Set.of("GENERATED", "EXISTING", "UPDATED_MARKER");
+   private static final Set<String> GENERATABLE_STATUSES =
+            Set.of("GENERATED", "EXISTING", "UPDATED_MARKER", "WOULD_GENERATE");
    private static final Set<String> READY_STATUSES = Set.of("OK");
+   private static final String EXECUTION_STATUS = "NOT_MEASURED";
+   private static final String EXECUTION_DETAILS =
+            "Quietly does not measure whether generated tests passed. Run Maven/Surefire and inspect its test results.";
 
    private final ReportType type;
    private final List<QuietlyReportEntry> entries = new ArrayList<>();
@@ -81,7 +86,7 @@ public class QuietlyReport
       return switch (type)
       {
          case PROJECT_DIAGNOSTICS -> readyFilters();
-         case FILTER_GENERATION -> generatedFilters();
+         case FILTER_GENERATION -> matchingLogicalCount(ReportCapability.FILTER_TEST, GENERATABLE_STATUSES);
          case FILTER_SCAN, CRUD_GENERATION -> 0;
       };
    }
@@ -94,6 +99,39 @@ public class QuietlyReport
    public long readyFilters()
    {
       return matchingLogicalCount(ReportCapability.FILTER_TEST, READY_STATUSES);
+   }
+
+   public long generatableFilters()
+   {
+      return switch (type)
+      {
+         case PROJECT_DIAGNOSTICS -> readyFilters();
+         case FILTER_GENERATION -> matchingLogicalCount(ReportCapability.FILTER_TEST, GENERATABLE_STATUSES);
+         case FILTER_SCAN, CRUD_GENERATION -> 0;
+      };
+   }
+
+   public long blockedFilters()
+   {
+      return logicalCount(
+               ReportCapability.FILTER_TEST,
+               entry -> !"STALE_GENERATED_TEST".equals(entry.status()) && isProblemStatus(entry.status())
+      );
+   }
+
+   public long generatedTestClasses()
+   {
+      return entries.stream()
+               .filter(entry -> entry.capability() == ReportCapability.FILTER_TEST)
+               .filter(entry -> GENERATED_STATUSES.contains(entry.status()))
+               .map(QuietlyReportEntry::entity)
+               .distinct()
+               .count();
+   }
+
+   public long generatedTestMethods()
+   {
+      return generatedFilters();
    }
 
    public long totalCrudOperations()
@@ -126,6 +164,11 @@ public class QuietlyReport
       return percentage(readyFilters(), totalFilters());
    }
 
+   public double generationReadinessPercent()
+   {
+      return percentage(generatableFilters(), discoveredFilters());
+   }
+
    public double crudCoveragePercent()
    {
       return percentage(coveredCrudOperations(), totalCrudOperations());
@@ -139,10 +182,7 @@ public class QuietlyReport
    public long problems()
    {
       return entries.stream()
-               .filter(entry -> entry.status().startsWith("SKIPPED")
-                        || entry.status().startsWith("MISSING")
-                        || entry.status().startsWith("STALE")
-                        || entry.status().startsWith("ERROR"))
+               .filter(entry -> isProblemStatus(entry.status()))
                .map(QuietlyReportEntry::logicalKey)
                .distinct()
                .count();
@@ -193,11 +233,14 @@ public class QuietlyReport
       lines.add("- Generated at: `" + LocalDateTime.now() + "`");
       lines.add("- Dry run: `" + config.dryRun() + "`");
       lines.add("- Field resolution mode: `" + config.fieldResolutionMode() + "`");
+      lines.add("- Execution: `" + EXECUTION_STATUS + "`");
+      lines.add("  " + EXECUTION_DETAILS);
       lines.add("");
       lines.add("## Summary");
       lines.add("");
       addMarkdownSummary(lines);
       lines.add("- Generated events: `" + count("GENERATED") + "`");
+      lines.add("- Would generate events: `" + count("WOULD_GENERATE") + "`");
       lines.add("- Existing events: `" + count("EXISTING") + "`");
       lines.add("- Updated markers: `" + count("UPDATED_MARKER") + "`");
       lines.add("- Stale generated tests: `" + count("STALE_GENERATED_TEST") + "`");
@@ -227,6 +270,11 @@ public class QuietlyReport
       json.append("  \"fieldResolutionMode\": \"").append(config.fieldResolutionMode()).append("\",\n");
       json.append("  \"summary\": {\n");
       appendJsonSummary(json);
+      json.append("  },\n");
+      json.append("  \"execution\": {\n");
+      json.append("    \"status\": \"").append(EXECUTION_STATUS).append("\",\n");
+      json.append("    \"measuredByQuietly\": false,\n");
+      json.append("    \"details\": \"").append(escapeJson(EXECUTION_DETAILS)).append("\"\n");
       json.append("  },\n");
       json.append("  \"entries\": [\n");
       for (int i = 0; i < entries.size(); i++)
@@ -258,10 +306,15 @@ public class QuietlyReport
       case FILTER_SCAN ->
       {
          json.append("    \"discoveredFilters\": ").append(discoveredFilters()).append(",\n");
+         json.append("    \"generatableFilters\": null,\n");
+         json.append("    \"blockedFilters\": null,\n");
+         json.append("    \"generationReadinessPercent\": null,\n");
+         appendJsonGeneratedTestSummary(json);
          appendJsonEventSummary(json);
       }
       case PROJECT_DIAGNOSTICS ->
       {
+         appendJsonFilterReadinessSummary(json);
          json.append("    \"analyzedFilters\": ").append(totalFilters()).append(",\n");
          json.append("    \"readyFilters\": ").append(readyFilters()).append(",\n");
          json.append("    \"readinessPercent\": ").append(format(readinessPercent())).append(",\n");
@@ -273,6 +326,7 @@ public class QuietlyReport
       }
       case FILTER_GENERATION ->
       {
+         appendJsonFilterReadinessSummary(json);
          json.append("    \"totalFilters\": ").append(totalFilters()).append(",\n");
          json.append("    \"coveredFilters\": ").append(generatedFilters()).append(",\n");
          json.append("    \"coveragePercent\": ").append(format(generationCoveragePercent())).append(",\n");
@@ -297,31 +351,48 @@ public class QuietlyReport
    private void appendJsonEventSummary(StringBuilder json)
    {
       json.append("    \"generatedEvents\": ").append(count("GENERATED")).append(",\n");
+      json.append("    \"wouldGenerateEvents\": ").append(count("WOULD_GENERATE")).append(",\n");
       json.append("    \"existingEvents\": ").append(count("EXISTING")).append(",\n");
       json.append("    \"updatedMarkers\": ").append(count("UPDATED_MARKER")).append(",\n");
       json.append("    \"staleGeneratedTests\": ").append(count("STALE_GENERATED_TEST")).append("\n");
+   }
+
+   private void appendJsonFilterReadinessSummary(StringBuilder json)
+   {
+      json.append("    \"discoveredFilters\": ").append(discoveredFilters()).append(",\n");
+      json.append("    \"generatableFilters\": ").append(generatableFilters()).append(",\n");
+      json.append("    \"blockedFilters\": ").append(blockedFilters()).append(",\n");
+      json.append("    \"generationReadinessPercent\": ").append(format(generationReadinessPercent())).append(",\n");
+      appendJsonGeneratedTestSummary(json);
+   }
+
+   private void appendJsonGeneratedTestSummary(StringBuilder json)
+   {
+      json.append("    \"generatedTestClasses\": ").append(generatedTestClasses()).append(",\n");
+      json.append("    \"generatedTestMethods\": ").append(generatedTestMethods()).append(",\n");
    }
 
    private void addMarkdownSummary(List<String> lines)
    {
       switch (type)
       {
-      case FILTER_SCAN -> lines.add("- Discovered filters: `" + discoveredFilters() + "`");
+      case FILTER_SCAN ->
+      {
+         lines.add("- Discovered filters: `" + discoveredFilters() + "`");
+         lines.add("- Generatable filters: `not evaluated by scan`");
+         lines.add("- Blocked/ambiguous filters: `not evaluated by scan`");
+         lines.add("- Generation readiness: `not evaluated by scan`");
+         addMarkdownGeneratedTestSummary(lines);
+      }
       case PROJECT_DIAGNOSTICS ->
       {
-         lines.add("- Analyzed filters: `" + totalFilters() + "`");
-         lines.add("- Ready filters: `" + readyFilters() + "`");
-         lines.add("- Readiness: `" + format(readinessPercent()) + "%`");
-         lines.add("- Existing generated tests: `" + generatedFilters() + "`");
-         lines.add("- Generation coverage: `" + format(generationCoveragePercent()) + "%`");
+         addMarkdownFilterReadinessSummary(lines);
          lines.add("- Diagnostics: `" + diagnostics() + "`");
          lines.add("- Problems: `" + problems() + "`");
       }
       case FILTER_GENERATION ->
       {
-         lines.add("- Total filters: `" + totalFilters() + "`");
-         lines.add("- Covered filters: `" + generatedFilters() + "`");
-         lines.add("- Generation coverage: `" + format(generationCoveragePercent()) + "%`");
+         addMarkdownFilterReadinessSummary(lines);
          lines.add("- Diagnostics: `" + diagnostics() + "`");
          lines.add("- Problems: `" + problems() + "`");
       }
@@ -334,6 +405,29 @@ public class QuietlyReport
          lines.add("- Problems: `" + problems() + "`");
       }
       }
+   }
+
+   private void addMarkdownFilterReadinessSummary(List<String> lines)
+   {
+      lines.add("- Discovered filters: `" + discoveredFilters() + "`");
+      lines.add("- Generatable filters: `" + generatableFilters() + "`");
+      lines.add("- Blocked/ambiguous filters: `" + blockedFilters() + "`");
+      lines.add("- Generation readiness: `" + format(generationReadinessPercent()) + "%`");
+      addMarkdownGeneratedTestSummary(lines);
+   }
+
+   private void addMarkdownGeneratedTestSummary(List<String> lines)
+   {
+      lines.add("- Generated test classes: `" + generatedTestClasses() + "`");
+      lines.add("- Generated test methods: `" + generatedTestMethods() + "`");
+   }
+
+   private boolean isProblemStatus(String status)
+   {
+      return status.startsWith("SKIPPED")
+               || status.startsWith("MISSING")
+               || status.startsWith("STALE")
+               || status.startsWith("ERROR");
    }
 
    private String format(double value)

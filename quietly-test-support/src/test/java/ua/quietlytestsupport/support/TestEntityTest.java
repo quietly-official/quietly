@@ -15,40 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class TestEntityTest
 {
 
-   @Test
-   @SuppressWarnings("unchecked")
-   public void returns_null_when_no_test_entity_exists()
-   {
-      AtomicReference<String> executedQuery = new AtomicReference<>();
-      TypedQuery<TestEntity> query = (TypedQuery<TestEntity>) Proxy.newProxyInstance(
-               getClass().getClassLoader(),
-               new Class<?>[]{TypedQuery.class},
-               (proxy, method, args) -> switch (method.getName())
-               {
-               case "setMaxResults" -> proxy;
-               case "getResultList" -> List.of();
-               default -> defaultValue(method.getReturnType());
-               }
-      );
-      EntityManager entityManager = (EntityManager) Proxy.newProxyInstance(
-               getClass().getClassLoader(),
-               new Class<?>[]{EntityManager.class},
-               (proxy, method, args) -> {
-                  if ("createQuery".equals(method.getName()))
-                  {
-                     executedQuery.set((String) args[0]);
-                     return query;
-                  }
-                  return defaultValue(method.getReturnType());
-               }
-      );
-
-      TestSupport support = new TestSupport();
-
-      assertNull(support.test_entity(entityManager, TestEntity.class, null));
-      assertEquals("SELECT e FROM TestEntity e", executedQuery.get());
-   }
-
    private static Object defaultValue(Class<?> returnType)
    {
       if (!returnType.isPrimitive())
@@ -64,6 +30,40 @@ public class TestEntityTest
          return '\0';
       }
       return 0;
+   }
+
+   @Test
+   @SuppressWarnings("unchecked")
+   public void returns_null_when_no_test_entity_exists()
+   {
+      AtomicReference<String> executedQuery = new AtomicReference<>();
+      TypedQuery<TestEntity> query = (TypedQuery<TestEntity>) Proxy.newProxyInstance(
+               getClass().getClassLoader(),
+               new Class<?>[] { TypedQuery.class },
+               (proxy, method, args) -> switch (method.getName())
+               {
+                  case "setMaxResults" -> proxy;
+                  case "getResultList" -> List.of();
+                  default -> defaultValue(method.getReturnType());
+               }
+      );
+      EntityManager entityManager = (EntityManager) Proxy.newProxyInstance(
+               getClass().getClassLoader(),
+               new Class<?>[] { EntityManager.class },
+               (proxy, method, args) -> {
+                  if ("createQuery".equals(method.getName()))
+                  {
+                     executedQuery.set((String) args[0]);
+                     return query;
+                  }
+                  return defaultValue(method.getReturnType());
+               }
+      );
+
+      TestSupport support = new TestSupport();
+
+      assertNull(support.test_entity(entityManager, TestEntity.class, null));
+      assertEquals("SELECT e FROM TestEntity e", executedQuery.get());
    }
 
    public static class TestEntity extends PanacheEntityBase

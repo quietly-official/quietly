@@ -28,6 +28,9 @@ public class QuietlyReportTest
 
       assertEquals(1, report.totalFilters());
       assertEquals(1, report.coveredFilters());
+      assertEquals(1, report.generatableFilters());
+      assertEquals(1, report.generatedTestClasses());
+      assertEquals(1, report.generatedTestMethods());
    }
 
    @Test
@@ -42,7 +45,9 @@ public class QuietlyReportTest
       assertEquals(1, report.coveredFilters());
       assertEquals(1, report.readyFilters());
       assertEquals(1, report.generatedFilters());
+      assertEquals(1, report.generatableFilters());
       assertEquals(100.0, report.coveragePercent());
+      assertEquals(100.0, report.generationReadinessPercent());
    }
 
    @Test
@@ -56,6 +61,7 @@ public class QuietlyReportTest
       assertEquals(0, report.coveredFilters());
       assertEquals(0, report.generatedFilters());
       assertEquals(0.0, report.coveragePercent());
+      assertEquals(0, report.generatableFilters());
    }
 
    @Test
@@ -70,6 +76,8 @@ public class QuietlyReportTest
       assertEquals(1, report.discoveredFilters());
       assertEquals(0, report.coveredFilters());
       assertEquals(0.0, report.coveragePercent());
+      assertEquals(0, report.generatableFilters());
+      assertEquals(1, report.blockedFilters());
       assertEquals(2, report.problems());
       assertTrue(report.hasProblems());
    }
@@ -115,9 +123,14 @@ public class QuietlyReportTest
       String markdown = Files.readString(config.reportFile());
       String json = Files.readString(config.jsonReportFile());
       assertTrue(markdown.contains("- Discovered filters: `1`"));
-      assertFalse(markdown.contains("coverage"));
-      assertFalse(markdown.contains("Covered filters"));
+      assertTrue(markdown.contains("- Generatable filters: `not evaluated by scan`"));
+      assertTrue(markdown.contains("- Generation readiness: `not evaluated by scan`"));
+      assertTrue(markdown.contains("- Execution: `NOT_MEASURED`"));
       assertTrue(json.contains("\"discoveredFilters\": 1"));
+      assertTrue(json.contains("\"generatableFilters\": null"));
+      assertTrue(json.contains("\"generationReadinessPercent\": null"));
+      assertTrue(json.contains("\"status\": \"NOT_MEASURED\""));
+      assertTrue(json.contains("\"measuredByQuietly\": false"));
       assertFalse(json.contains("coveragePercent"));
       assertFalse(json.contains("readinessPercent"));
       assertFalse(json.contains("crudCoveragePercent"));
@@ -131,12 +144,14 @@ public class QuietlyReportTest
       QuietlyReport crudReport = new QuietlyReport(ReportType.CRUD_GENERATION);
 
       assertEquals(0.0, filterReport.generationCoveragePercent());
+      assertEquals(0.0, filterReport.generationReadinessPercent());
       assertEquals(0.0, doctorReport.readinessPercent());
       assertEquals(0.0, crudReport.crudCoveragePercent());
    }
 
    @Test
-   public void doctor_json_contains_readiness_and_generation_coverage_but_not_crud_coverage() throws Exception
+   public void doctor_json_separates_readiness_generation_and_execution_while_retaining_legacy_fields()
+            throws Exception
    {
       QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
       report.addFilter("Customer", "obj.status", "OK", "ready");
@@ -148,14 +163,94 @@ public class QuietlyReportTest
 
       String markdown = Files.readString(config.reportFile());
       String json = Files.readString(config.jsonReportFile());
-      assertTrue(markdown.contains("- Generation coverage: `50.00%`"));
+      assertTrue(markdown.contains("- Discovered filters: `2`"));
+      assertTrue(markdown.contains("- Generatable filters: `2`"));
+      assertTrue(markdown.contains("- Blocked/ambiguous filters: `0`"));
+      assertTrue(markdown.contains("- Generation readiness: `100.00%`"));
+      assertTrue(markdown.contains("- Generated test classes: `1`"));
+      assertTrue(markdown.contains("- Generated test methods: `1`"));
+      assertTrue(markdown.contains("- Execution: `NOT_MEASURED`"));
       assertTrue(json.contains("\"analyzedFilters\": 2"));
       assertTrue(json.contains("\"readyFilters\": 2"));
       assertTrue(json.contains("\"readinessPercent\": 100.00"));
       assertTrue(json.contains("\"existingGeneratedTests\": 1"));
+      assertTrue(json.contains("\"discoveredFilters\": 2"));
+      assertTrue(json.contains("\"generatableFilters\": 2"));
+      assertTrue(json.contains("\"blockedFilters\": 0"));
+      assertTrue(json.contains("\"generationReadinessPercent\": 100.00"));
+      assertTrue(json.contains("\"generatedTestClasses\": 1"));
+      assertTrue(json.contains("\"generatedTestMethods\": 1"));
+      // Legacy field retained for existing JSON consumers.
       assertTrue(json.contains("\"generationCoveragePercent\": 50.00"));
+      assertTrue(json.contains("\"status\": \"NOT_MEASURED\""));
       assertFalse(json.contains("\"coveragePercent\""));
       assertFalse(json.contains("\"crudCoveragePercent\""));
+   }
+
+   @Test
+   public void generation_report_counts_distinct_classes_methods_and_blocked_filters() throws Exception
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.FILTER_GENERATION);
+      report.addFilter("Customer", "obj.status", "GENERATED", "generated");
+      report.addFilter("Customer", "obj.name", "EXISTING", "already generated");
+      report.addFilter("Order", "obj.status", "SKIPPED_UNRESOLVED_FIELD", "ambiguous");
+
+      QuietlyPluginConfig config = config();
+      report.write(config);
+
+      String markdown = Files.readString(config.reportFile());
+      String json = Files.readString(config.jsonReportFile());
+
+      assertEquals(3, report.discoveredFilters());
+      assertEquals(2, report.generatableFilters());
+      assertEquals(1, report.blockedFilters());
+      assertEquals(1, report.generatedTestClasses());
+      assertEquals(2, report.generatedTestMethods());
+      assertEquals(66.66666666666667, report.generationReadinessPercent());
+
+      assertTrue(markdown.contains("- Discovered filters: `3`"));
+      assertTrue(markdown.contains("- Generatable filters: `2`"));
+      assertTrue(markdown.contains("- Blocked/ambiguous filters: `1`"));
+      assertTrue(markdown.contains("- Generation readiness: `66.67%`"));
+      assertTrue(markdown.contains("- Generated test classes: `1`"));
+      assertTrue(markdown.contains("- Generated test methods: `2`"));
+      assertTrue(markdown.contains("does not measure whether generated tests passed"));
+
+      assertTrue(json.contains("\"discoveredFilters\": 3"));
+      assertTrue(json.contains("\"generatableFilters\": 2"));
+      assertTrue(json.contains("\"blockedFilters\": 1"));
+      assertTrue(json.contains("\"generationReadinessPercent\": 66.67"));
+      assertTrue(json.contains("\"generatedTestClasses\": 1"));
+      assertTrue(json.contains("\"generatedTestMethods\": 2"));
+      assertTrue(json.contains("\"measuredByQuietly\": false"));
+      // Legacy generation fields remain available for existing consumers.
+      assertTrue(json.contains("\"coveragePercent\": 66.67"));
+      assertTrue(json.contains("\"generationCoveragePercent\": 66.67"));
+      assertTrue(json.contains("\"filterCoveragePercent\": 66.67"));
+   }
+
+   @Test
+   public void dry_run_is_generatable_without_claiming_generated_artifacts()
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.FILTER_GENERATION);
+      report.addFilter("Customer", "obj.status", "WOULD_GENERATE", "dry run");
+
+      assertEquals(1, report.discoveredFilters());
+      assertEquals(1, report.generatableFilters());
+      assertEquals(100.0, report.generationReadinessPercent());
+      assertEquals(0, report.generatedTestClasses());
+      assertEquals(0, report.generatedTestMethods());
+   }
+
+   @Test
+   public void stale_generated_test_is_not_counted_as_a_blocked_discovered_filter()
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.FILTER_GENERATION);
+      report.addFilter("Customer", "obj.removed", "STALE_GENERATED_TEST", "removed filter");
+
+      assertEquals(0, report.discoveredFilters());
+      assertEquals(0, report.blockedFilters());
+      assertEquals(1, report.problems());
    }
 
    @Test
