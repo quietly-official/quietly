@@ -9,6 +9,7 @@
     </parent>
 
     <artifactId>quietly-core</artifactId>
+    <name>Quietly Core</name>
 
     <dependencies>
         <!-- REFLECTIONS -->

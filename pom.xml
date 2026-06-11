@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         child.project.url.inherit.append.path="false"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.quietly-official</groupId>
@@ -31,7 +32,9 @@
         </developer>
     </developers>
 
-    <scm>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
         <connection>scm:git:https://github.com/quietly-official/quietly.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/quietly-official/quietly.git</developerConnection>
         <url>https://github.com/quietly-official/quietly</url>

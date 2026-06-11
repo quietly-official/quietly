@@ -9,6 +9,7 @@
     </parent>
 
     <artifactId>quietly-test-support</artifactId>
+    <name>Quietly Test Support</name>
 
     <dependencies>
         <!-- REST ASSURED -->
