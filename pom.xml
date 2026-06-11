@@ -50,7 +50,7 @@
         <gpg-plugin.version>3.2.8</gpg-plugin.version>
         <jar-plugin.version>3.4.2</jar-plugin.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
-        <maven.version>3.9.6</maven.version>
+        <maven.version>3.9.16</maven.version>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
