@@ -5,6 +5,10 @@
 <h2 align="center"><i>Tests that grow with your code - incremental, safe, automated.</i></h2>
 
 <p align="center">
+<a href="https://central.sonatype.com/artifact/io.github.quietly-official/quietly-maven-plugin">
+  <img src="https://img.shields.io/maven-central/v/io.github.quietly-official/quietly-maven-plugin?label=Maven%20Central&color=informational" alt="Maven Central" />
+</a>
+
   <a href="https://github.com/quietly-official/quietly/actions/workflows/build.yml">
     <img src="https://github.com/quietly-official/quietly/actions/workflows/build.yml/badge.svg" alt="Build" />
   </a>
