@@ -16,7 +16,6 @@ First public beta release candidate.
 
 ### Known Limitations
 
-- Central publication remains blocked until Sonatype approves the `io.github.quietly-official` namespace.
 - Java packages intentionally remain under `ua.quietly...` for this beta.
 - Quietly does not measure runtime test execution coverage.
 - CRUD test generation is experimental and convention-based.

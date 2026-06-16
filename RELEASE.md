@@ -1,4 +1,4 @@
-# Quietly Release Guide
+# Quietly Maintainer Release Guide
 
 Quietly publishes under `io.github.quietly-official` from
 [`quietly-official/quietly`](https://github.com/quietly-official/quietly). The external consumer repository is
@@ -6,7 +6,7 @@ Quietly publishes under `io.github.quietly-official` from
 
 ## Prerequisites
 
-Before preparing the first Central release:
+Before preparing a Central release:
 
 1. Create or access the project in the [Central Publisher Portal](https://central.sonatype.com/).
 2. Verify that the organization controls the `io.github.quietly-official` namespace.
@@ -58,8 +58,8 @@ The command that uploads a release bundle is:
 This command uploads and validates the bundle but does not publish it automatically because `autoPublish` is disabled.
 After validation, inspect the deployment in the Central Portal and publish it manually.
 
-Do not run the upload command from a snapshot or unreviewed source tree. The `0.1.0-beta.1` release must come from the
-exact commit tagged `v0.1.0-beta.1`.
+Do not run the upload command from a snapshot or unreviewed source tree. A release must come from the exact commit
+tagged with the matching `v<version>` tag.
 
 ## GitHub Actions
 
@@ -78,8 +78,8 @@ Never store these values in source files, Maven properties, workflow inputs or c
 
 ## Beta API Boundary
 
-The Java package names remain under `ua.quietly...` for `0.1.0-beta.1`. This is an intentional beta decision and is
-independent from the Maven groupId `io.github.quietly-official`.
+The Java package names currently remain under `ua.quietly...`. This is independent from the Maven groupId
+`io.github.quietly-official`.
 
 Consumer-facing API:
 
@@ -95,14 +95,15 @@ carry no compatibility guarantee during the beta series.
 A package rename or a stricter exported/internal API split may be evaluated after the beta. It must not be performed
 silently because generated sources directly import the current test-support packages.
 
-## Release 0.1.0-beta.1 Checklist
+## Release Checklist
 
 1. Confirm the main CI and `quietly-demo` consumer build are green.
-2. Confirm that the Central namespace `io.github.quietly-official` has been approved.
+2. Confirm the release version does not end in `-SNAPSHOT`.
 3. Run the local verification commands.
 4. Complete the signing rehearsal and inspect every expected `.asc` file.
-5. Create and review the `v0.1.0-beta.1` tag from the exact release commit.
+5. Create and review the matching `v<version>` tag from the exact release commit.
 6. Run the manual `Release` workflow with upload disabled and inspect its artifacts.
-7. Run it again with upload enabled only after namespace, token and GPG checks are complete.
+7. Run it again with upload enabled only after token and GPG checks are complete.
 8. Inspect the validated deployment in Central Portal and publish it manually.
-9. Restore the next development version after the release.
+9. Test `quietly-demo` from a clean Maven cache after Central sync completes.
+10. Restore the next development version after the release.

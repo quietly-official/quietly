@@ -76,22 +76,12 @@ jobs:
         with:
           path: quietly
 
-      - name: Verify integration repository token
-        env:
-          DEMO_TOKEN: ${{ secrets.QUIETLY_INTEGRATION_DEMO_TOKEN }}
-        run: |
-          if [ -z "$DEMO_TOKEN" ]; then
-            echo "::error::QUIETLY_INTEGRATION_DEMO_TOKEN is not available. Configure it as a repository or organization Actions secret with read access to quietly-official/quietly-demo."
-            exit 1
-          fi
-
       - name: Checkout integration demo
         uses: actions/checkout@v4
         with:
           repository: quietly-official/quietly-demo
           ref: main
           path: quietly-demo
-          token: ${{ secrets.QUIETLY_INTEGRATION_DEMO_TOKEN }}
 
       - name: Set up Java
         uses: actions/setup-java@v4

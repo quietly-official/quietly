@@ -1,45 +1,31 @@
-# Cross-Repository Lifecycle Integration
+# Consumer Lifecycle Integration
 
 Quietly verifies lifecycle-bound test generation against the external
 [`quietly-official/quietly-demo`](https://github.com/quietly-official/quietly-demo) consumer project.
 
-The integration works in both directions:
+The public demo gives Quietly a real consumer build:
 
-- `quietly` checks out `quietly-demo`, installs the Quietly change under test, and runs the demo lifecycle;
-- `quietly-demo` checks out `quietly`, installs it locally, and verifies generated-test execution.
+- `quietly` checks out `quietly-demo`, installs the Quietly change under test, and runs the demo lifecycle.
+- `quietly-demo` can also be run directly against the latest published version from Maven Central.
 
-Both repositories must remain accessible to their corresponding workflow token.
+The integration intentionally exercises the normal Maven lifecycle instead of invoking a generated class directly. This
+protects the documented `generate-test-sources` setup: generated test sources must be created, registered, compiled and
+executed by a plain Maven test run.
 
-## Secret Required In `quietly`
+For a local smoke test after a release:
 
-Configure this GitHub Actions secret in `quietly-official/quietly`:
+```bash
+git clone https://github.com/quietly-official/quietly-demo.git
+cd quietly-demo
+mvn -U -Dmaven.repo.local=/tmp/quietly-central-check clean test
+```
 
-| Setting | Value |
-| --- | --- |
-| Secret name | `QUIETLY_INTEGRATION_DEMO_TOKEN` |
-| Secret value | Fine-grained GitHub personal access token |
-| Repository access | `quietly-official/quietly-demo` |
-| Minimum permission | Contents: Read-only |
+When validating an unpublished Quietly change, install the local reactor first and override the demo version:
 
-## Secret Required In `quietly-demo`
+```bash
+cd quietly
+./mvnw -B -ntp install -DskipTests
 
-Configure this GitHub Actions secret in `quietly-official/quietly-demo`:
-
-| Setting | Value |
-| --- | --- |
-| Secret name | `QUIETLY_REPOSITORY_TOKEN` |
-| Secret value | Fine-grained GitHub personal access token |
-| Repository access | `quietly-official/quietly` |
-| Minimum permission | Contents: Read-only |
-
-## Token Requirements
-
-- Select `quietly-official` as the resource owner when creating each fine-grained PAT.
-- Organization approval may be required before a token can access the selected private repository.
-- Keep both tokens read-only. The workflows only need to clone source code.
-- Store token values only as GitHub Actions secrets; never commit them to either repository.
-- If either repository becomes inaccessible to its token, the cross-repository lifecycle integration fails before
-  Maven can generate or run tests.
-
-Repository-level secrets are configured under **Settings → Secrets and variables → Actions**. Organization secrets
-must explicitly grant access to the repository that consumes them.
+cd ../quietly-demo
+mvn -B -ntp clean test -Dquietly.version=<local-version>
+```

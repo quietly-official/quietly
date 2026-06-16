@@ -14,18 +14,12 @@ Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities,
 `@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST
 filters.
 
-The first beta release candidate uses groupId `io.github.quietly-official` and version `0.1.0-beta.1`.
+Current Maven coordinates use groupId `io.github.quietly-official` and version `0.1.0-beta.1`.
 
 Start here:
 
 - [English documentation](docs/eng_.md)
 - [Documentazione italiana](docs/it_.md)
-
-Quick local install:
-
-```bash
-mvn clean install
-```
 
 Quietly requires Java 17 and is built against Maven 3.9.6 as its minimum documented Maven baseline.
 
@@ -63,22 +57,6 @@ The main CI also checks out
 [`quietly-demo`](https://github.com/quietly-official/quietly-demo) and runs its
 plain `mvn clean test` lifecycle against the Quietly commit or pull request under test. The build fails if the generated
 test source or its Surefire execution evidence is missing.
-
-Because the demo repository is private, the Quietly repository must define the Actions secret
-`QUIETLY_INTEGRATION_DEMO_TOKEN`. Use a fine-grained read-only token with access only to
-`quietly-demo` and the `Contents: read` permission. This secret is used exclusively by
-`actions/checkout`. GitHub does not expose repository secrets to forked or Dependabot pull requests, so the external
-consumer job is skipped for those events while the normal Maven verification still runs.
-
-For release-package verification without publishing:
-
-```bash
-mvn -Prelease clean verify
-```
-
-The `release` profile attaches source and Javadoc JARs without requiring GPG or Central credentials. Signing and
-Central Portal upload live in the separate `central-release` profile and are never activated by the normal build.
-See [RELEASE.md](RELEASE.md) for the manual release procedure, required secrets and safe local settings template.
 
 Current scope: Quarkus, Hibernate ORM/Panache, REST endpoints, and integration tests. Spring support and HTML reports
 are intentionally out of scope for now.
