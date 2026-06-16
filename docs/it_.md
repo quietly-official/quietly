@@ -71,7 +71,7 @@ Aggiungi il plugin:
                 </execution>
             </executions>
             <configuration>
-                <basePackage>it.ness.gestioneinterinali</basePackage>
+                <basePackage>com.acme</basePackage>
                 <entityPackagePattern>${basePackage}.entities</entityPackagePattern>
                 <servicePackagePattern>${basePackage}.services.rs</servicePackagePattern>
                 <serviceNamePattern>${entitySimpleName}ServiceRs</serviceNamePattern>
