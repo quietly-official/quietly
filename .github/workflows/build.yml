@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -72,12 +72,12 @@ jobs:
 
     steps:
       - name: Checkout Quietly change under test
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: quietly
 
       - name: Checkout integration demo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: quietly-official/quietly-demo
           ref: main
