@@ -313,13 +313,13 @@ target/quietly/filters-report.md
 
 Esempio:
 
-```markdown
-| Entity | Capability | Subject | Status | Details |
-| --- | --- | --- | --- | --- |
-| Customer | FILTER_TEST | obj.status | GENERATED | Generated test method. |
-| Worker | FILTER_TEST | obj.data_riferimento | SKIPPED_UNRESOLVED_FIELD | ... |
-| UtenteFattura | DIAGNOSTIC | missing-service | SKIPPED_MISSING_SERVICE | ... |
-```
+
+| Entity        | Capability  | Subject              | Status                   | Details                |
+|---------------|-------------|----------------------|--------------------------|------------------------|
+| Customer      | FILTER_TEST | obj.status           | GENERATED                | Generated test method. |
+| Worker        | FILTER_TEST | obj.data_riferimento | SKIPPED_UNRESOLVED_FIELD | ...                    |
+| UtenteFattura | DIAGNOSTIC  | missing-service      | SKIPPED_MISSING_SERVICE  | ...                    |
+
 
 Stati principali:
 
