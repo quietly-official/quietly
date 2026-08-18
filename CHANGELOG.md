@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0
+
+### Changed
+
+- Introduced shared project discovery and generation planning architecture.
+- Added explicit Maven module context to diagnostics and reports.
+- Improved multi-module Maven diagnostics and documentation.
+- Centralized discovery through `ProjectDiscovery` and `DiscoveredProject`.
+- Centralized service, fixture and field resolution through shared resolver components.
+- Made `FilterTestAstBuilder` renderer-only with field readiness decided before AST generation.
+- Added internal `GenerationPlan` support for `FILTER_TEST` decisions shared by `doctor` and `filter-tests`.
+- Kept CRUD behavior and generated Java output intentionally compatible.
+
+### Compatibility
+
+- Quietly remains scoped to the current concrete Maven module.
+- Quietly is not a reactor aggregator plugin.
+- Public report/status semantics remain unchanged.
+- CRUD generation remains experimental.
+
 ## 0.1.0-beta.1
 
 First public beta release candidate.
