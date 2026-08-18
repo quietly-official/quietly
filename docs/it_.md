@@ -34,9 +34,9 @@ mvn clean install
 Questo installa nel repository Maven locale:
 
 ```text
-io.github.quietly-official:quietly-core:0.1.0-beta.1
-io.github.quietly-official:quietly-test-support:0.1.0-beta.1
-io.github.quietly-official:quietly-maven-plugin:0.1.0-beta.1
+io.github.quietly-official:quietly-core:0.2.0
+io.github.quietly-official:quietly-test-support:0.2.0
+io.github.quietly-official:quietly-maven-plugin:0.2.0
 ```
 
 ## Setup Nel Progetto Target
@@ -47,7 +47,7 @@ Aggiungi il supporto runtime ai test:
 <dependency>
     <groupId>io.github.quietly-official</groupId>
     <artifactId>quietly-test-support</artifactId>
-    <version>0.1.0-beta.1</version>
+    <version>0.2.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -60,7 +60,7 @@ Aggiungi il plugin:
         <plugin>
             <groupId>io.github.quietly-official</groupId>
             <artifactId>quietly-maven-plugin</artifactId>
-            <version>0.1.0-beta.1</version>
+            <version>0.2.0</version>
             <executions>
                 <execution>
                     <id>generate-quietly-filter-tests</id>
@@ -100,6 +100,44 @@ L'output predefinito e `target/generated-test-sources/quietly`. La Mojo `filter-
 Le invocazioni dirette separate non conservano le test source root presenti in memoria nel `MavenProject`. Per esempio,
 `mvn compile quietly:filter-tests` seguito da un distinto `mvn test` puo lasciare la directory generata fuori dalle
 source root della seconda build. Per l'uso normale, lega il plugin a `generate-test-sources` come nell'esempio.
+
+## Progetti Maven Multi-module
+
+Quietly supporta build Maven multi-module quando e configurato nel modulo applicativo/test concreto che possiede il
+runtime di test Quarkus. Quietly usa il `MavenProject` corrente: compile classpath del modulo, directory delle classi
+del modulo, generated-test source root del modulo e report risolti dalla base directory del modulo.
+
+Quietly non e attualmente un reactor aggregator plugin. Non configurarlo solo nel parent `packaging=pom` aspettandoti
+che scansioni tutti i moduli figli o scriva test in un altro modulo.
+
+Layout supportato:
+
+```text
+root/
+  pom.xml
+  app/
+    pom.xml        # Quietly configurato qui
+  model/
+    pom.xml        # dipendenza visibile ad app
+  service/
+    pom.xml        # dipendenza visibile ad app
+```
+
+In questo layout, entity e servizi REST devono essere visibili nel compile/test classpath di `app`. I test generati sono
+scritti in `app/target/generated-test-sources/quietly`.
+
+Non ancora supportato:
+
+```text
+root/
+  pom.xml          # Quietly configurato solo qui, packaging=pom
+  app/
+  model/
+  service/
+```
+
+Quando `quietly:scan` o `quietly:doctor` gira su un modulo `packaging=pom`, Quietly scrive una diagnostica che spiega di
+configurare la generazione nel modulo applicativo/test concreto.
 
 ## Comandi
 
