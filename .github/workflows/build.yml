@@ -99,7 +99,7 @@ jobs:
 
       - name: Generate, compile and run consumer tests
         working-directory: quietly-demo
-        run: mvn -B -ntp clean test -Dquietly.version=0.1.0-beta.1
+        run: mvn -B -ntp clean test -Dquietly.version=0.2.0
 
       - name: Verify generated test execution evidence
         working-directory: quietly-demo

@@ -10,7 +10,8 @@ import com.github.javaparser.printer.configuration.PrettyPrinterConfiguration;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import ua.quietlycore.model.FilterEntityInfo;
-import ua.quietlymavenplugin.adapters.ProjectClassLoaderFactory;
+import ua.quietlymavenplugin.discovery.ServiceResolution;
+import ua.quietlymavenplugin.discovery.ServiceResolver;
 import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
 import ua.quietlymavenplugin.render.javaparser.ImportManager;
@@ -19,7 +20,6 @@ import ua.quietlymavenplugin.render.report.ReportType;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -63,18 +63,17 @@ public class CrudTestsCodeGenerator
 
    private void generateEntityCrudTests(Class<?> scannedEntityClass) throws Exception
    {
-      ClassLoader projectCl = ProjectClassLoaderFactory.buildProjectClassLoader(project);
-      try
+      try (ServiceResolver serviceResolver = new ServiceResolver(project, config))
       {
-         Class<?> entityClass = Class.forName(scannedEntityClass.getName(), true, projectCl);
+         Class<?> entityClass = serviceResolver.loadProjectClass(scannedEntityClass);
          String entityName = entityClass.getSimpleName();
          String rootPkg = config.resolveRootPackage(entityClass);
-         String serviceClassName = config.resolveServiceClassName(entityClass);
+         ServiceResolution service = serviceResolver.resolve(entityClass);
 
-         if (!serviceExists(serviceClassName, projectCl))
+         if (!service.exists())
          {
             String message = "Entity " + entityName + " has no matching REST service for CRUD smoke tests. "
-                     + "Expected " + serviceClassName + ". Configure servicePackagePattern/serviceNamePattern "
+                     + "Expected " + service.expectedClassName() + ". Configure servicePackagePattern/serviceNamePattern "
                      + "or set failOnMissingService=false.";
             report.addDiagnostic(entityName, "missing-service", "SKIPPED_MISSING_SERVICE", message);
             if (config.failOnMissingService())
@@ -90,7 +89,7 @@ public class CrudTestsCodeGenerator
 
          if (!Files.exists(testFilePath))
          {
-            CompilationUnit cu = CrudTestAstBuilder.createCompilationUnit(entityClass, rootPkg, serviceClassName,
+            CompilationUnit cu = CrudTestAstBuilder.createCompilationUnit(entityClass, rootPkg, service.expectedClassName(),
                      config);
             report.addCrudOperation(entityName, "list", "GENERATED", "Generated list endpoint smoke test.");
             report.addCrudOperation(entityName, "get-missing", "GENERATED", "Generated missing entity smoke test.");
@@ -141,10 +140,6 @@ public class CrudTestsCodeGenerator
                   "Updated CRUD test file: ")
                   + testFilePath.getFileName());
       }
-      finally
-      {
-         closeClassLoader(projectCl);
-      }
    }
 
    private void ensureCrudMethod(
@@ -175,27 +170,6 @@ public class CrudTestsCodeGenerator
       report.addCrudOperation(classDecl.getNameAsString().replace("CrudTest", ""), operation, "GENERATED",
                "Generated CRUD smoke test method.");
       log.info(Constants.QUIETLY_INFO + "Added CRUD test: " + methodName);
-   }
-
-   private boolean serviceExists(String serviceClassName, ClassLoader projectCl)
-   {
-      try
-      {
-         Class.forName(serviceClassName, false, projectCl);
-         return true;
-      }
-      catch (ClassNotFoundException e)
-      {
-         return false;
-      }
-   }
-
-   private void closeClassLoader(ClassLoader classLoader) throws IOException
-   {
-      if (classLoader instanceof URLClassLoader urlClassLoader)
-      {
-         urlClassLoader.close();
-      }
    }
 
    private void writeCompilationUnit(Path path, CompilationUnit cu) throws IOException

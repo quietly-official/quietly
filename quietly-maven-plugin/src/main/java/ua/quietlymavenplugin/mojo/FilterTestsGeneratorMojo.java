@@ -7,16 +7,14 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import ua.quietlycore.model.FilterEntityInfo;
-import ua.quietlycore.scan.EntityScanOptions;
-import ua.quietlycore.scan.FilterScanner;
+import ua.quietlymavenplugin.discovery.DiscoveredProject;
+import ua.quietlymavenplugin.discovery.ProjectDiscovery;
 import ua.quietlymavenplugin.render.FilterTestsCodeGenerator;
 import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * Generates or updates JUnit integration tests for Hibernate filters and registers the generated directory as a Maven
@@ -136,14 +134,10 @@ public class FilterTestsGeneratorMojo extends AbstractMojo
             registerGeneratedTestSource(project, config);
          }
 
-         List<FilterEntityInfo> entitiesFilters =
-                  FilterScanner.scanProjectEntities(
-                           project.getCompileClasspathElements(),
-                           project.getBuild().getOutputDirectory(),
-                           EntityScanOptions.filteredApplicationEntities(config.entityPackagePatternForScan()));
+         DiscoveredProject discoveredProject = new ProjectDiscovery(project, config).discoverFilteredApplicationEntities();
 
          FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(getLog(), project, config);
-         generator.generateFilterTests(entitiesFilters);
+         generator.generateFilterTests(discoveredProject.entities());
 
       }
       catch (Exception e)

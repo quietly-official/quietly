@@ -18,7 +18,7 @@ Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities,
 `@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST
 filters.
 
-Current Maven coordinates use groupId `io.github.quietly-official` and version `0.1.0-beta.1`.
+Current Maven coordinates use groupId `io.github.quietly-official` and version `0.2.0`.
 
 Start here:
 
@@ -56,6 +56,42 @@ target/quietly/crud-report.json
 
 Report percentages describe generation readiness, not runtime test coverage. Quietly reports execution as
 `NOT_MEASURED`; Maven/Surefire is the source of truth for whether generated tests ran and passed.
+
+## Multi-module Maven projects
+
+Quietly supports Maven multi-module builds when the plugin is configured in the concrete application/test module that
+owns the Quarkus test runtime. Quietly is not currently a reactor aggregator plugin: it does not scan every child module
+from a parent `packaging=pom` project, and it never writes generated tests into a module other than the current
+`MavenProject`.
+
+In a supported layout, configure Quietly in the module that runs the tests:
+
+```text
+root/
+  pom.xml
+  app/
+    pom.xml        # Quietly configured here
+  model/
+    pom.xml        # dependency visible to app
+  service/
+    pom.xml        # dependency visible to app
+```
+
+The entity and REST service classes must be visible on the compile/test classpath of the module where Quietly runs. The
+generated tests are written under that same module's `target/generated-test-sources/quietly` directory.
+
+This layout is not supported yet:
+
+```text
+root/
+  pom.xml          # Quietly configured only here, packaging=pom
+  app/
+  model/
+  service/
+```
+
+Run `quietly:scan` or `quietly:doctor` from a parent aggregator only to get a diagnostic warning; configure generation
+inside the application/test module.
 
 The main CI also checks out
 [`quietly-demo`](https://github.com/quietly-official/quietly-demo) and runs its

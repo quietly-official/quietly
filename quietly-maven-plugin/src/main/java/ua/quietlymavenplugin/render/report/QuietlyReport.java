@@ -236,6 +236,15 @@ public class QuietlyReport
       lines.add("- Execution: `" + EXECUTION_STATUS + "`");
       lines.add("  " + EXECUTION_DETAILS);
       lines.add("");
+      lines.add("## Module Context");
+      lines.add("");
+      lines.add("- ArtifactId: `" + config.moduleArtifactId() + "`");
+      lines.add("- Packaging: `" + config.packaging() + "`");
+      lines.add("- Basedir: `" + config.basedir() + "`");
+      lines.add("- Generated test output directory: `" + config.testOutputDirectory() + "`");
+      lines.add("- Packaging is pom: `" + config.pomPackaging() + "`");
+      lines.add("- Reactor modules: `" + config.reactorModuleCount() + "`");
+      lines.add("");
       lines.add("## Summary");
       lines.add("");
       addMarkdownSummary(lines);
@@ -268,6 +277,15 @@ public class QuietlyReport
       json.append("  \"reportType\": \"").append(type).append("\",\n");
       json.append("  \"dryRun\": ").append(config.dryRun()).append(",\n");
       json.append("  \"fieldResolutionMode\": \"").append(config.fieldResolutionMode()).append("\",\n");
+      json.append("  \"module\": {\n");
+      json.append("    \"artifactId\": \"").append(escapeJson(config.moduleArtifactId())).append("\",\n");
+      json.append("    \"packaging\": \"").append(escapeJson(config.packaging())).append("\",\n");
+      json.append("    \"basedir\": \"").append(escapeJson(config.basedir().toString())).append("\",\n");
+      json.append("    \"generatedTestOutputDirectory\": \"")
+               .append(escapeJson(config.testOutputDirectory().toString())).append("\",\n");
+      json.append("    \"pomPackaging\": ").append(config.pomPackaging()).append(",\n");
+      json.append("    \"reactorModules\": ").append(config.reactorModuleCount()).append("\n");
+      json.append("  },\n");
       json.append("  \"summary\": {\n");
       appendJsonSummary(json);
       json.append("  },\n");

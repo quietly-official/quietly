@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.github.quietly-official</groupId>
         <artifactId>quietly-parent</artifactId>
-        <version>0.1.0-beta.1</version>
+        <version>0.2.0</version>
     </parent>
 
     <packaging>maven-plugin</packaging>

@@ -23,6 +23,8 @@ class FilterTestsGeneratorMojoTest
    {
       MavenProject project = new MavenProject();
       project.setFile(tempDir.resolve("pom.xml").toFile());
+      project.setArtifactId("app");
+      project.setPackaging("jar");
       Build build = new Build();
       build.setDirectory(tempDir.resolve("target").toString());
       project.setBuild(build);
@@ -34,6 +36,32 @@ class FilterTestsGeneratorMojoTest
       String expected = tempDir.resolve("target/generated-test-sources/quietly").toString();
       assertTrue(project.getTestCompileSourceRoots().contains(expected));
       assertEquals(expected, config.testOutputDirectory().toString());
+   }
+
+   @Test
+   void registers_generated_directory_on_current_module_only()
+   {
+      MavenProject root = new MavenProject();
+      root.setFile(tempDir.resolve("pom.xml").toFile());
+      root.setArtifactId("root");
+      root.setPackaging("pom");
+
+      Path moduleDir = tempDir.resolve("app");
+      MavenProject app = new MavenProject();
+      app.setFile(moduleDir.resolve("pom.xml").toFile());
+      app.setArtifactId("app");
+      app.setPackaging("jar");
+      Build build = new Build();
+      build.setDirectory(moduleDir.resolve("target").toString());
+      app.setBuild(build);
+
+      QuietlyPluginConfig config = QuietlyPluginConfig.defaults(app);
+
+      FilterTestsGeneratorMojo.registerGeneratedTestSource(app, config);
+
+      assertTrue(app.getTestCompileSourceRoots()
+               .contains(moduleDir.resolve("target/generated-test-sources/quietly").toString()));
+      assertTrue(root.getTestCompileSourceRoots().isEmpty());
    }
 
    @Test

@@ -21,6 +21,7 @@ public class QuietlyPluginConfig
    private final boolean failOnUnresolvedField;
    private final boolean dryRun;
    private final FieldResolutionMode fieldResolutionMode;
+   private final ModuleContext moduleContext;
 
    public QuietlyPluginConfig(
             MavenProject project,
@@ -49,6 +50,7 @@ public class QuietlyPluginConfig
       this.failOnUnresolvedField = failOnUnresolvedField;
       this.dryRun = dryRun;
       this.fieldResolutionMode = fieldResolutionMode == null ? FieldResolutionMode.STRICT : fieldResolutionMode;
+      this.moduleContext = ModuleContext.from(project, resolveTestOutputDirectory());
    }
 
    public static QuietlyPluginConfig defaults(MavenProject project)
@@ -75,6 +77,11 @@ public class QuietlyPluginConfig
    }
 
    public Path testOutputDirectory()
+   {
+      return moduleContext.generatedTestOutputDirectory();
+   }
+
+   private Path resolveTestOutputDirectory()
    {
       if (testOutputDirectory != null)
       {
@@ -126,6 +133,36 @@ public class QuietlyPluginConfig
    public FieldResolutionMode fieldResolutionMode()
    {
       return fieldResolutionMode;
+   }
+
+   public String moduleArtifactId()
+   {
+      return moduleContext.artifactId();
+   }
+
+   public String packaging()
+   {
+      return moduleContext.packaging();
+   }
+
+   public boolean pomPackaging()
+   {
+      return moduleContext.pomPackaging();
+   }
+
+   public Path basedir()
+   {
+      return moduleContext.basedir();
+   }
+
+   public int reactorModuleCount()
+   {
+      return moduleContext.reactorModuleCount();
+   }
+
+   public ModuleContext moduleContext()
+   {
+      return moduleContext;
    }
 
    public String entityPackagePatternForScan()

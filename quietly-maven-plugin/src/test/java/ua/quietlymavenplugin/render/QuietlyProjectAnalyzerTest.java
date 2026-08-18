@@ -15,6 +15,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -78,6 +80,46 @@ public class QuietlyProjectAnalyzerTest
       assertTrue(markdown.contains("MISSING_TABLE_NAME"));
    }
 
+   @Test
+   public void doctor_projects_plan_entries_to_legacy_report_statuses() throws Exception
+   {
+      MavenProject project = project();
+      QuietlyPluginConfig config = config(project, null, "projection-report.md");
+      Path generatedFile = config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java");
+      Files.createDirectories(generatedFile.getParent());
+      Files.writeString(generatedFile, """
+               package com.acme;
+
+               public class CustomerFiltersTest {
+                   /**
+                    * @quietly-generated filter="obj.status"
+                    */
+                   public void obj_status_filter_test() {
+                   }
+
+                   /**
+                    * @quietly-generated filter="obj.oldStatus"
+                    */
+                   public void obj_oldStatus_filter_test() {
+                   }
+               }
+               """);
+      QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(new SystemStreamLog(), project, config);
+
+      QuietlyReport report = analyzer.doctor(List.of(
+               new FilterEntityInfo(Customer.class, List.of(
+                        filter("obj", "status"),
+                        filter("obj", "missing")
+               ))
+      ));
+
+      assertTrue(statuses(report, "obj.status").contains("OK"));
+      assertTrue(statuses(report, "obj.status").contains("EXISTING"));
+      assertTrue(statuses(report, "obj.missing").contains("SKIPPED_UNRESOLVED_FIELD"));
+      assertTrue(statuses(report, "obj.oldStatus").contains("STALE_GENERATED_TEST"));
+      assertTrue(statuses(report, "table-name").contains("MISSING_TABLE_NAME"));
+   }
+
    private MavenProject project() throws Exception
    {
       TestMavenProject project = new TestMavenProject(List.of(testClassesPath()));
@@ -117,6 +159,14 @@ public class QuietlyProjectAnalyzerTest
       filter.field = field;
       filter.paramType = String.class;
       return filter;
+   }
+
+   private Set<String> statuses(QuietlyReport report, String subject)
+   {
+      return report.entries().stream()
+               .filter(entry -> entry.subject().equals(subject))
+               .map(entry -> entry.status())
+               .collect(Collectors.toSet());
    }
 
    private static class TestMavenProject extends MavenProject
