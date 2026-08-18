@@ -1,5 +1,6 @@
 package ua.quietlymavenplugin.render;
 
+import com.acme.model.AmbiguousCustomer;
 import com.acme.model.Customer;
 import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.project.MavenProject;
@@ -7,8 +8,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.quietlycore.model.FilterEntityInfo;
 import ua.quietlycore.model.FilterInfo;
+import ua.quietlymavenplugin.discovery.DiscoveredProject;
+import ua.quietlymavenplugin.plan.DoctorPlanner;
+import ua.quietlymavenplugin.plan.GenerationPlan;
+import ua.quietlymavenplugin.plan.PlanState;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
+import ua.quietlymavenplugin.render.report.QuietlyReport;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -157,6 +163,83 @@ public class FilterTestsCodeGeneratorTest
    }
 
    @Test
+   public void unresolved_field_uses_domain_specific_error_before_rendering() throws Exception
+   {
+      MavenProject project = project();
+      QuietlyPluginConfig config = config(project, false);
+      FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
+
+      QuietlyGenerationException exception = assertThrows(
+               QuietlyGenerationException.class,
+               () -> generator.generateFilterTests(
+                        List.of(new FilterEntityInfo(Customer.class, List.of(filter("obj", "missing")))))
+      );
+
+      assertTrue(exception.getMessage().contains("Use fieldResolutionMode=FUZZY or fix the filter metadata"));
+      assertFalse(Files.readString(config.reportFile()).contains("obj_missing_filter_test"));
+   }
+
+   @Test
+   public void doctor_and_filter_tests_agree_on_missing_field_resolution() throws Exception
+   {
+      MavenProject project = project();
+      QuietlyPluginConfig doctorConfig = config(project, false, "doctor-report.md", false, true,
+               FieldResolutionMode.STRICT);
+      QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(new SystemStreamLog(), project, doctorConfig);
+
+      QuietlyReport doctorReport = analyzer.doctor(List.of(
+               new FilterEntityInfo(Customer.class, List.of(filter("obj", "missing")))
+      ));
+
+      QuietlyPluginConfig generatorConfig = config(project, false, "generator-report.md", false, false,
+               FieldResolutionMode.STRICT);
+      FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project,
+               generatorConfig);
+      generator.generateFilterTests(List.of(
+               new FilterEntityInfo(Customer.class, List.of(filter("obj", "missing")))
+      ));
+
+      String generatorReport = Files.readString(generatorConfig.reportFile());
+      assertEquals("SKIPPED_UNRESOLVED_FIELD", doctorReport.entries().stream()
+               .filter(entry -> entry.subject().equals("obj.missing"))
+               .findFirst()
+               .orElseThrow()
+               .status());
+      assertTrue(generatorReport.contains("| Customer | FILTER_TEST | obj.missing | SKIPPED_UNRESOLVED_FIELD |"));
+      assertFalse(generatorReport.contains("obj_missing_filter_test"));
+   }
+
+   @Test
+   public void doctor_and_filter_tests_agree_on_strict_ambiguous_field_resolution() throws Exception
+   {
+      MavenProject project = project();
+      QuietlyPluginConfig doctorConfig = config(project, false, "doctor-ambiguous-report.md", false, true,
+               FieldResolutionMode.STRICT);
+      QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(new SystemStreamLog(), project, doctorConfig);
+
+      QuietlyReport doctorReport = analyzer.doctor(List.of(
+               new FilterEntityInfo(AmbiguousCustomer.class, List.of(filter("obj", "code")))
+      ));
+
+      QuietlyPluginConfig generatorConfig = config(project, false, "generator-ambiguous-report.md", false, false,
+               FieldResolutionMode.STRICT);
+      FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project,
+               generatorConfig);
+      generator.generateFilterTests(List.of(
+               new FilterEntityInfo(AmbiguousCustomer.class, List.of(filter("obj", "code")))
+      ));
+
+      String generatorReport = Files.readString(generatorConfig.reportFile());
+      assertEquals("SKIPPED_UNRESOLVED_FIELD", doctorReport.entries().stream()
+               .filter(entry -> entry.subject().equals("obj.code"))
+               .findFirst()
+               .orElseThrow()
+               .status());
+      assertTrue(generatorReport.contains("| AmbiguousCustomer | FILTER_TEST | obj.code | SKIPPED_UNRESOLVED_FIELD |"));
+      assertFalse(generatorReport.contains("obj_code_filter_test"));
+   }
+
+   @Test
    public void generator_writes_markdown_report() throws Exception
    {
       MavenProject project = project();
@@ -204,6 +287,40 @@ public class FilterTestsCodeGeneratorTest
 
       assertTrue(report.contains("| Customer | FILTER_TEST | obj.oldStatus | STALE_GENERATED_TEST |"));
       assertTrue(jsonReport.contains("\"status\": \"STALE_GENERATED_TEST\""));
+   }
+
+   @Test
+   public void generator_uses_plan_readiness_without_treating_fixture_diagnostic_as_generation_blocker()
+            throws Exception
+   {
+      MavenProject project = project();
+      QuietlyPluginConfig config = config(project, false);
+      List<FilterEntityInfo> entities = List.of(
+               new FilterEntityInfo(Customer.class, List.of(filter("obj", "status")))
+      );
+      GenerationPlan plan = new DoctorPlanner(project, config)
+               .plan(new DiscoveredProject(config.moduleContext(), entities));
+
+      assertEquals(PlanState.READY, plan.entries().stream()
+               .filter(entry -> entry.subject().equals("obj.status"))
+               .filter(entry -> !entry.diagnostic())
+               .findFirst()
+               .orElseThrow()
+               .state());
+      assertEquals(PlanState.BLOCKED, plan.entries().stream()
+               .filter(entry -> entry.subject().equals("table-name"))
+               .findFirst()
+               .orElseThrow()
+               .state());
+
+      FilterTestsCodeGenerator generator = new FilterTestsCodeGenerator(new SystemStreamLog(), project, config);
+      generator.generateFilterTests(entities);
+
+      String report = Files.readString(config.reportFile());
+      String generated = Files.readString(config.testOutputDirectory().resolve("com/acme/CustomerFiltersTest.java"));
+      assertTrue(report.contains("| Customer | FILTER_TEST | obj.status | GENERATED |"));
+      assertFalse(report.contains("MISSING_TABLE_NAME"));
+      assertTrue(generated.contains("obj_status_filter_test"));
    }
 
    @Test
@@ -258,6 +375,18 @@ public class FilterTestsCodeGeneratorTest
 
    private QuietlyPluginConfig config(MavenProject project, boolean disabledByDefault)
    {
+      return config(project, disabledByDefault, "quietly-report.md", true, true, FieldResolutionMode.STRICT);
+   }
+
+   private QuietlyPluginConfig config(
+            MavenProject project,
+            boolean disabledByDefault,
+            String reportName,
+            boolean failOnMissingService,
+            boolean failOnUnresolvedField,
+            FieldResolutionMode fieldResolutionMode
+   )
+   {
       return new QuietlyPluginConfig(
                project,
                null,
@@ -265,12 +394,12 @@ public class FilterTestsCodeGeneratorTest
                null,
                null,
                tempDir.resolve("generated-tests").toFile(),
-               tempDir.resolve("quietly-report.md").toFile(),
+               tempDir.resolve(reportName).toFile(),
                disabledByDefault,
-               true,
-               true,
+               failOnMissingService,
+               failOnUnresolvedField,
                false,
-               FieldResolutionMode.STRICT
+               fieldResolutionMode
       );
    }
 

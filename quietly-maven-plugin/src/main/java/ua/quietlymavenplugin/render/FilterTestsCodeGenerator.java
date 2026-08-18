@@ -15,17 +15,22 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import ua.quietlycore.model.FilterEntityInfo;
 import ua.quietlycore.model.FilterInfo;
-import ua.quietlymavenplugin.adapters.ProjectClassLoaderFactory;
+import ua.quietlymavenplugin.discovery.DiscoveredProject;
+import ua.quietlymavenplugin.discovery.ServiceResolution;
+import ua.quietlymavenplugin.plan.DoctorPlanner;
+import ua.quietlymavenplugin.plan.GenerationPlan;
+import ua.quietlymavenplugin.plan.PlanEntry;
+import ua.quietlymavenplugin.plan.PlanState;
 import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
 import ua.quietlymavenplugin.render.config.TestImportsConstants;
+import ua.quietlymavenplugin.render.javaparser.FieldResolutionResult;
 import ua.quietlymavenplugin.render.javaparser.ImportManager;
 import ua.quietlymavenplugin.render.report.QuietlyReport;
 import ua.quietlymavenplugin.render.report.ReportType;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,12 +62,14 @@ public class FilterTestsCodeGenerator
    public void generateFilterTests(List<FilterEntityInfo> entities) throws Exception
    {
       Path testRoot = config.testOutputDirectory();
+      GenerationPlan plan = new DoctorPlanner(project, config)
+               .plan(new DiscoveredProject(config.moduleContext(), entities));
 
       try
       {
          for (FilterEntityInfo entityInfo : entities)
          {
-            generateEntityTests(entityInfo, testRoot);
+            generateEntityTests(entityInfo, testRoot, plan);
          }
       }
       finally
@@ -71,116 +78,148 @@ public class FilterTestsCodeGenerator
       }
    }
 
-   private void generateEntityTests(FilterEntityInfo entityInfo, Path testRoot) throws Exception
+   private void generateEntityTests(FilterEntityInfo entityInfo, Path testRoot, GenerationPlan plan) throws Exception
    {
-      ClassLoader projectCl = ProjectClassLoaderFactory.buildProjectClassLoader(project);
-      try
+      List<PlanEntry> entityEntries = entityEntries(plan, entityInfo.entityClass());
+      if (entityEntries.isEmpty())
       {
-         Class<?> entityClass = Class.forName(entityInfo.entityClass().getName(), true, projectCl);
-         String entityName = entityClass.getSimpleName();
-         String rootPkg = config.resolveRootPackage(entityClass);
-         String serviceClassName = config.resolveServiceClassName(entityClass);
+         return;
+      }
 
-         if (!serviceExists(serviceClassName, projectCl))
+      Class<?> entityClass = entityEntries.get(0).entity();
+      String entityName = entityClass.getSimpleName();
+      String rootPkg = config.resolveRootPackage(entityClass);
+      List<PlanEntry> filterEntries = filterEntries(entityEntries);
+
+      Optional<ServiceResolution> missingService = filterEntries.stream()
+               .map(PlanEntry::serviceResolution)
+               .flatMap(Optional::stream)
+               .filter(service -> !service.exists())
+               .findFirst();
+      if (missingService.isPresent())
+      {
+         String message = missingServiceMessage(entityName, missingService.orElseThrow());
+         report.addDiagnostic(entityName, "missing-service", "SKIPPED_MISSING_SERVICE", message);
+         for (PlanEntry filterEntry : filterEntries)
          {
-            String message = "Entity " + entityName + " has Hibernate filters but no matching REST service was found. "
-                     + "Expected " + serviceClassName + ". Configure servicePackagePattern/serviceNamePattern "
-                     + "or set failOnMissingService=false.";
-            report.addDiagnostic(entityName, "missing-service", "SKIPPED_MISSING_SERVICE", message);
-            for (FilterInfo filter : entityInfo.filters())
-            {
-               report.addFilter(entityName, filterName(filter), "SKIPPED_MISSING_SERVICE", message);
-            }
-            if (config.failOnMissingService())
-            {
-               throw new QuietlyGenerationException(message);
-            }
-            log.warn(Constants.QUIETLY_WARN + message);
-            return;
+            report.addFilter(entityName, filterEntry.subject(), "SKIPPED_MISSING_SERVICE", message);
          }
-
-         Path targetDir = testRoot.resolve(rootPkg.replace('.', File.separatorChar));
-         Path testFilePath = targetDir.resolve(entityName + "FiltersTest.java");
-
-         if (!Files.exists(testFilePath))
+         if (config.failOnMissingService())
          {
-            CompilationUnit cu = createCompilationUnit(entityClass, rootPkg, serviceClassName);
-            ClassOrInterfaceDeclaration classDecl = cu.getClassByName(entityName + "FiltersTest").orElseThrow();
-
-            for (FilterInfo filter : entityInfo.filters())
-            {
-               addFilterTestMethod(classDecl, filter, entityClass);
-            }
-
-            writeCompilationUnit(testFilePath, cu);
-            log.info(Constants.QUIETLY_INFO + (config.dryRun() ? "Would create test file: " : "Created test file: ")
-                     + testFilePath.getFileName());
-            return;
+            throw new QuietlyGenerationException(message);
          }
+         log.warn(Constants.QUIETLY_WARN + message);
+         return;
+      }
 
-         CompilationUnit cu = StaticJavaParser.parse(Files.readString(testFilePath, StandardCharsets.UTF_8));
-         if (config.disabledByDefault())
+      ServiceResolution service = filterEntries.stream()
+               .map(PlanEntry::serviceResolution)
+               .flatMap(Optional::stream)
+               .findFirst()
+               .orElseThrow();
+
+      Path targetDir = testRoot.resolve(rootPkg.replace('.', File.separatorChar));
+      Path testFilePath = targetDir.resolve(entityName + "FiltersTest.java");
+
+      if (!Files.exists(testFilePath))
+      {
+         CompilationUnit cu = createCompilationUnit(entityClass, rootPkg, service.expectedClassName());
+         ClassOrInterfaceDeclaration classDecl = cu.getClassByName(entityName + "FiltersTest").orElseThrow();
+
+         for (PlanEntry filterEntry : filterEntries)
          {
-            ImportManager.add_imports(List.of("org.junit.jupiter.api.Disabled"), cu);
+            addFilterTestMethod(classDecl, filterEntry);
          }
-
-         Optional<ClassOrInterfaceDeclaration> maybeClass = cu.getClassByName(entityName + "FiltersTest");
-         if (maybeClass.isEmpty())
-         {
-            String message = "Class " + entityName + "FiltersTest not found in existing file " + testFilePath + ".";
-            report.addDiagnostic(entityName, "invalid-existing-filter-test", "SKIPPED_INVALID_EXISTING_FILE", message);
-            log.warn(Constants.QUIETLY_WARN + message);
-            return;
-         }
-
-         ClassOrInterfaceDeclaration classDecl = maybeClass.get();
-         Set<String> existingMethodNames = new HashSet<>();
-         for (MethodDeclaration method : classDecl.getMethods())
-         {
-            existingMethodNames.add(method.getNameAsString());
-         }
-
-         if (!existingMethodNames.contains("beforeEach"))
-         {
-            classDecl.addMember(FilterTestAstBuilder.buildBeforeEachMethod(entityClass));
-            log.info(Constants.QUIETLY_INFO + "Added method beforeEach for: " + entityName);
-         }
-
-         for (FilterInfo filter : entityInfo.filters())
-         {
-            String methodName = toJavaIdentifier(filter.prefix + "_" + filter.field + "_filter_test");
-            if (existingMethodNames.contains(methodName))
-            {
-               MethodDeclaration existingMethod = classDecl.getMethodsByName(methodName).get(0);
-               if (ensureQuietlyMarker(existingMethod, filter))
-               {
-                  report.addFilter(entityName, filterName(filter), "UPDATED_MARKER",
-                           "Method " + methodName + " already exists; added Quietly marker.");
-               }
-               else
-               {
-                  report.addFilter(entityName, filterName(filter), "EXISTING",
-                           "Method " + methodName + " already exists.");
-               }
-               continue;
-            }
-
-            if (addFilterTestMethod(classDecl, filter, entityClass))
-            {
-               log.info(Constants.QUIETLY_INFO + "Added test: " + methodName);
-            }
-         }
-
-         reportStaleGeneratedTests(classDecl, entityInfo.filters(), entityName);
 
          writeCompilationUnit(testFilePath, cu);
-         log.info(Constants.QUIETLY_INFO + (config.dryRun() ? "Would update test file: " : "Updated test file: ")
+         log.info(Constants.QUIETLY_INFO + (config.dryRun() ? "Would create test file: " : "Created test file: ")
                   + testFilePath.getFileName());
+         return;
       }
-      finally
+
+      Optional<PlanEntry> invalidExistingFile = entityEntries.stream()
+               .filter(PlanEntry::diagnostic)
+               .filter(entry -> "SKIPPED_INVALID_EXISTING_FILE".equals(entry.reportStatus()))
+               .findFirst();
+      if (invalidExistingFile.isPresent())
       {
-         closeClassLoader(projectCl);
+         PlanEntry entry = invalidExistingFile.orElseThrow();
+         report.addDiagnostic(entityName, entry.subject(), entry.reportStatus(), entry.reason());
+         log.warn(Constants.QUIETLY_WARN + entry.reason());
+         return;
       }
+
+      CompilationUnit cu = StaticJavaParser.parse(Files.readString(testFilePath, StandardCharsets.UTF_8));
+      if (config.disabledByDefault())
+      {
+         ImportManager.add_imports(List.of("org.junit.jupiter.api.Disabled"), cu);
+      }
+
+      ClassOrInterfaceDeclaration classDecl = cu.getClassByName(entityName + "FiltersTest").orElseThrow();
+      Set<String> existingMethodNames = new HashSet<>();
+      for (MethodDeclaration method : classDecl.getMethods())
+      {
+         existingMethodNames.add(method.getNameAsString());
+      }
+
+      if (!existingMethodNames.contains("beforeEach"))
+      {
+         classDecl.addMember(FilterTestAstBuilder.buildBeforeEachMethod(entityClass));
+         log.info(Constants.QUIETLY_INFO + "Added method beforeEach for: " + entityName);
+      }
+
+      for (PlanEntry filterEntry : filterEntries)
+      {
+         FilterInfo filter = filterEntry.filter().orElseThrow();
+         String methodName = toJavaIdentifier(filter.prefix + "_" + filter.field + "_filter_test");
+         if (existingMethodNames.contains(methodName))
+         {
+            MethodDeclaration existingMethod = classDecl.getMethodsByName(methodName).get(0);
+            if (ensureQuietlyMarker(existingMethod, filter))
+            {
+               report.addFilter(entityName, filterEntry.subject(), "UPDATED_MARKER",
+                        "Method " + methodName + " already exists; added Quietly marker.");
+            }
+            else
+            {
+               report.addFilter(entityName, filterEntry.subject(), "EXISTING",
+                        "Method " + methodName + " already exists.");
+            }
+            continue;
+         }
+
+         if (addFilterTestMethod(classDecl, filterEntry))
+         {
+            log.info(Constants.QUIETLY_INFO + "Added test: " + methodName);
+         }
+      }
+
+      reportStaleGeneratedTests(entityEntries, entityName);
+
+      writeCompilationUnit(testFilePath, cu);
+      log.info(Constants.QUIETLY_INFO + (config.dryRun() ? "Would update test file: " : "Updated test file: ")
+               + testFilePath.getFileName());
+   }
+
+   private List<PlanEntry> entityEntries(GenerationPlan plan, Class<?> entityClass)
+   {
+      return plan.entries().stream()
+               .filter(entry -> entry.entity().getName().equals(entityClass.getName()))
+               .toList();
+   }
+
+   private List<PlanEntry> filterEntries(List<PlanEntry> entityEntries)
+   {
+      return entityEntries.stream()
+               .filter(entry -> !entry.diagnostic())
+               .toList();
+   }
+
+   private String missingServiceMessage(String entityName, ServiceResolution service)
+   {
+      return "Entity " + entityName + " has Hibernate filters but no matching REST service was found. "
+               + "Expected " + service.expectedClassName() + ". Configure servicePackagePattern/serviceNamePattern "
+               + "or set failOnMissingService=false.";
    }
 
    private CompilationUnit createCompilationUnit(Class<?> entityClass, String rootPkg, String serviceClassName)
@@ -219,56 +258,45 @@ public class FilterTestsCodeGenerator
 
    private boolean addFilterTestMethod(
             ClassOrInterfaceDeclaration classDecl,
-            FilterInfo filter,
-            Class<?> entityClass
+            PlanEntry filterEntry
    )
    {
-      try
-      {
-         classDecl.addMember(FilterTestAstBuilder.buildFilterTestMethod(
-                  filter,
-                  entityClass,
-                  log,
-                  config.fieldResolutionMode(),
-                  config.disabledByDefault()
-         ));
-         String status = config.dryRun() ? "WOULD_GENERATE" : "GENERATED";
-         String details = config.dryRun() ? "Would generate test method." : "Generated test method.";
-         report.addFilter(entityClass.getSimpleName(), filterName(filter), status, details);
-         return true;
-      }
-      catch (QuietlyGenerationException e)
+      FilterInfo filter = filterEntry.filter().orElseThrow();
+      Class<?> entityClass = filterEntry.entity();
+      FieldResolutionResult fieldResult = filterEntry.fieldResolution().orElseThrow();
+      fieldResult.warnings().forEach(log::warn);
+
+      if (filterEntry.state() == PlanState.BLOCKED)
       {
          if (config.failOnUnresolvedField())
          {
-            throw e;
+            throw new QuietlyGenerationException(unresolvedFieldMessage(filter, entityClass, fieldResult));
          }
-         String message = e.getMessage() + " Skipping this generated test because failOnUnresolvedField=false.";
+         String message = unresolvedFieldMessage(filter, entityClass, fieldResult)
+                  + " Skipping this generated test because failOnUnresolvedField=false.";
          report.addFilter(entityClass.getSimpleName(), filterName(filter), "SKIPPED_UNRESOLVED_FIELD", message);
          log.warn(Constants.QUIETLY_WARN + message);
          return false;
       }
+
+      classDecl.addMember(FilterTestAstBuilder.buildFilterTestMethod(
+               filter,
+               entityClass,
+               fieldResult,
+               config.disabledByDefault()
+      ));
+      String status = config.dryRun() ? "WOULD_GENERATE" : "GENERATED";
+      String details = config.dryRun() ? "Would generate test method." : "Generated test method.";
+      report.addFilter(entityClass.getSimpleName(), filterName(filter), status, details);
+      return true;
    }
 
-   private boolean serviceExists(String serviceClassName, ClassLoader projectCl)
+   private String unresolvedFieldMessage(FilterInfo filter, Class<?> entityClass, FieldResolutionResult fieldResult)
    {
-      try
-      {
-         Class.forName(serviceClassName, false, projectCl);
-         return true;
-      }
-      catch (ClassNotFoundException e)
-      {
-         return false;
-      }
-   }
-
-   private void closeClassLoader(ClassLoader classLoader) throws IOException
-   {
-      if (classLoader instanceof URLClassLoader urlClassLoader)
-      {
-         urlClassLoader.close();
-      }
+      return "Filter " + filterName(filter) + " references field " + filter.field
+               + ", but no deterministic field match was found on entity " + entityClass.getSimpleName()
+               + ". Use fieldResolutionMode=FUZZY or fix the filter metadata. Details: "
+               + String.join("; ", fieldResult.errors());
    }
 
    private void writeCompilationUnit(Path path, CompilationUnit cu) throws IOException
@@ -319,52 +347,12 @@ public class FilterTestsCodeGenerator
       return "@quietly-generated filter=\"" + filterName(filter) + "\"";
    }
 
-   private void reportStaleGeneratedTests(
-            ClassOrInterfaceDeclaration classDecl,
-            List<FilterInfo> currentFilters,
-            String entityName
-   )
+   private void reportStaleGeneratedTests(List<PlanEntry> entityEntries, String entityName)
    {
-      Set<String> currentFilterNames = new HashSet<>();
-      for (FilterInfo filter : currentFilters)
-      {
-         currentFilterNames.add(filterName(filter));
-      }
-
-      for (MethodDeclaration method : classDecl.getMethods())
-      {
-         Optional<String> maybeFilter = extractQuietlyGeneratedFilter(method);
-         if (maybeFilter.isPresent() && !currentFilterNames.contains(maybeFilter.get()))
-         {
-            report.addFilter(entityName, maybeFilter.get(), "STALE_GENERATED_TEST",
-                     "Generated method " + method.getNameAsString()
-                              + " references a filter that was not discovered anymore.");
-         }
-      }
-   }
-
-   private Optional<String> extractQuietlyGeneratedFilter(MethodDeclaration method)
-   {
-      return method.getJavadocComment()
-               .map(JavadocComment::getContent)
-               .flatMap(this::extractQuietlyGeneratedFilter);
-   }
-
-   private Optional<String> extractQuietlyGeneratedFilter(String javadoc)
-   {
-      String marker = "@quietly-generated filter=\"";
-      int start = javadoc.indexOf(marker);
-      if (start < 0)
-      {
-         return Optional.empty();
-      }
-      int valueStart = start + marker.length();
-      int valueEnd = javadoc.indexOf('"', valueStart);
-      if (valueEnd < 0)
-      {
-         return Optional.empty();
-      }
-      return Optional.of(javadoc.substring(valueStart, valueEnd));
+      entityEntries.stream()
+               .filter(PlanEntry::diagnostic)
+               .filter(entry -> entry.state() == PlanState.STALE)
+               .forEach(entry -> report.addFilter(entityName, entry.subject(), entry.reportStatus(), entry.reason()));
    }
 
    private String toJavaIdentifier(String value)

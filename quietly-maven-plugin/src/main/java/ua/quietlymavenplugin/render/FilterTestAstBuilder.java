@@ -4,11 +4,8 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.*;
-import org.apache.maven.plugin.logging.Log;
 import ua.quietlycore.model.FilterInfo;
-import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 import ua.quietlymavenplugin.render.javaparser.FieldResolutionResult;
-import ua.quietlymavenplugin.render.javaparser.FieldResolver;
 import ua.quietlymavenplugin.render.javaparser.dsl.MethodDsl;
 import ua.quietlymavenplugin.render.javaparser.dsl.Quietly;
 
@@ -27,28 +24,12 @@ public class FilterTestAstBuilder
    public static MethodDeclaration buildFilterTestMethod(
             FilterInfo filter,
             Class<?> entityClass,
-            Log log,
-            FieldResolutionMode fieldResolutionMode,
+            FieldResolutionResult fieldResult,
             boolean disabledByDefault
    )
    {
       String filterField = filter.field;
       String prefix = filter.prefix;
-
-      FieldResolutionResult fieldResult = FieldResolver.resolveField(entityClass, filterField, fieldResolutionMode);
-      if (log != null)
-      {
-         fieldResult.warnings().forEach(log::warn);
-      }
-      if (!fieldResult.resolved())
-      {
-         throw new QuietlyGenerationException(
-                  "Filter " + prefix + "." + filterField + " references field " + filterField
-                           + ", but no deterministic field match was found on entity " + entityClass.getSimpleName()
-                           + ". Use fieldResolutionMode=FUZZY or fix the filter metadata. Details: "
-                           + String.join("; ", fieldResult.errors())
-         );
-      }
 
       Field realField = fieldResult.field().orElseThrow();
       String realFieldName = realField.getName();

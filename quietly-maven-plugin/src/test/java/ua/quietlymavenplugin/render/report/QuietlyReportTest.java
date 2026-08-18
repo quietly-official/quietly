@@ -137,6 +137,62 @@ public class QuietlyReportTest
    }
 
    @Test
+   public void report_contains_current_module_context() throws Exception
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
+
+      QuietlyPluginConfig config = config("customer-app", "jar");
+      report.write(config);
+
+      String markdown = Files.readString(config.reportFile());
+      String json = Files.readString(config.jsonReportFile());
+
+      assertTrue(markdown.contains("## Module Context"));
+      assertTrue(markdown.contains("- ArtifactId: `customer-app`"));
+      assertTrue(markdown.contains("- Packaging: `jar`"));
+      assertTrue(markdown.contains("- Basedir: `" + tempDir + "`"));
+      assertTrue(markdown.contains("- Generated test output directory: `" + config.testOutputDirectory() + "`"));
+      assertTrue(markdown.contains("- Packaging is pom: `false`"));
+      assertTrue(json.contains("\"module\": {"));
+      assertTrue(json.contains("\"artifactId\": \"customer-app\""));
+      assertTrue(json.contains("\"packaging\": \"jar\""));
+      assertTrue(json.contains("\"pomPackaging\": false"));
+      assertTrue(json.contains("\"generatedTestOutputDirectory\": \"" + config.testOutputDirectory() + "\""));
+   }
+
+   @Test
+   public void jar_module_does_not_get_aggregator_warning() throws Exception
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
+      QuietlyPluginConfig config = config("customer-app", "jar");
+
+      assertFalse(ModuleContextDiagnostics.addAggregatorWarningIfNeeded(report, config));
+      assertEquals(0, report.diagnostics());
+      assertFalse(report.hasProblems());
+   }
+
+   @Test
+   public void pom_module_gets_aggregator_warning_without_becoming_a_problem() throws Exception
+   {
+      QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
+      QuietlyPluginConfig config = config("customer-parent", "pom");
+
+      assertTrue(ModuleContextDiagnostics.addAggregatorWarningIfNeeded(report, config));
+      assertEquals(1, report.diagnostics());
+      assertFalse(report.hasProblems());
+
+      report.write(config);
+
+      String markdown = Files.readString(config.reportFile());
+      String json = Files.readString(config.jsonReportFile());
+      assertTrue(markdown.contains("WARNING_AGGREGATOR_MODULE"));
+      assertTrue(markdown.contains(ModuleContextDiagnostics.AGGREGATOR_WARNING_MESSAGE));
+      assertTrue(json.contains("\"status\": \"WARNING_AGGREGATOR_MODULE\""));
+      assertTrue(json.contains("not currently a reactor aggregator plugin"));
+      assertTrue(json.contains("\"pomPackaging\": true"));
+   }
+
+   @Test
    public void empty_reports_use_zero_instead_of_false_one_hundred_percent()
    {
       QuietlyReport filterReport = new QuietlyReport(ReportType.FILTER_GENERATION);
@@ -278,10 +334,17 @@ public class QuietlyReportTest
 
    private QuietlyPluginConfig config() throws Exception
    {
+      return config("quietly-test", "jar");
+   }
+
+   private QuietlyPluginConfig config(String artifactId, String packaging) throws Exception
+   {
       MavenProject project = new MavenProject();
       File pom = tempDir.resolve("pom.xml").toFile();
       Files.writeString(pom.toPath(), "<project />");
       project.setFile(pom);
+      project.setArtifactId(artifactId);
+      project.setPackaging(packaging);
 
       return new QuietlyPluginConfig(
                project,

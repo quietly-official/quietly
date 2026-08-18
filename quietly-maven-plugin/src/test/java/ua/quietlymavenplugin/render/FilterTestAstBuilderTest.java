@@ -5,6 +5,11 @@ import com.acme.model.DateCustomer;
 import org.junit.jupiter.api.Test;
 import ua.quietlycore.model.FilterInfo;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
+import ua.quietlymavenplugin.render.javaparser.FieldResolutionResult;
+import ua.quietlymavenplugin.render.javaparser.FieldResolver;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,8 +22,7 @@ public class FilterTestAstBuilderTest
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("obj", "status"),
                Customer.class,
-               null,
-               FieldResolutionMode.STRICT,
+               resolved(Customer.class, "status"),
                false
       ).toString();
 
@@ -32,8 +36,7 @@ public class FilterTestAstBuilderTest
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("obj", "status"),
                Customer.class,
-               null,
-               FieldResolutionMode.STRICT,
+               resolved(Customer.class, "status"),
                true
       ).toString();
 
@@ -46,8 +49,7 @@ public class FilterTestAstBuilderTest
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("customer.obj", "fornitore_uuid"),
                Customer.class,
-               null,
-               FieldResolutionMode.STRICT,
+               resolved(Customer.class, "fornitore_uuid"),
                false
       ).toString();
 
@@ -61,8 +63,7 @@ public class FilterTestAstBuilderTest
       String generated = FilterTestAstBuilder.buildFilterTestMethod(
                filter("from", "dataRiferimento"),
                DateCustomer.class,
-               null,
-               FieldResolutionMode.STRICT,
+               resolved(DateCustomer.class, "dataRiferimento"),
                false
       ).toString();
 
@@ -70,20 +71,21 @@ public class FilterTestAstBuilderTest
    }
 
    @Test
-   public void unresolved_field_uses_domain_specific_error()
+   public void builder_does_not_resolve_fields_or_raise_field_resolution_errors() throws Exception
    {
-      QuietlyGenerationException exception = assertThrows(
-               QuietlyGenerationException.class,
-               () -> FilterTestAstBuilder.buildFilterTestMethod(
-                        filter("obj", "missing"),
-                        Customer.class,
-                        null,
-                        FieldResolutionMode.STRICT,
-                        false
-               )
-      );
+      String source = Files.readString(Path.of(
+               "src/main/java/ua/quietlymavenplugin/render/FilterTestAstBuilder.java"
+      ));
 
-      assertTrue(exception.getMessage().contains("Use fieldResolutionMode=FUZZY or fix the filter metadata"));
+      assertFalse(source.contains("FieldResolver"));
+      assertFalse(source.contains("QuietlyGenerationException"));
+   }
+
+   private FieldResolutionResult resolved(Class<?> entityClass, String field)
+   {
+      FieldResolutionResult result = FieldResolver.resolveField(entityClass, field, FieldResolutionMode.STRICT);
+      assertTrue(result.resolved());
+      return result;
    }
 
    private FilterInfo filter(String prefix, String field)

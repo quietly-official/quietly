@@ -7,17 +7,17 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import ua.quietlycore.model.FilterEntityInfo;
-import ua.quietlycore.scan.EntityScanOptions;
-import ua.quietlycore.scan.FilterScanner;
+import ua.quietlymavenplugin.discovery.DiscoveredProject;
+import ua.quietlymavenplugin.discovery.ProjectDiscovery;
 import ua.quietlymavenplugin.render.QuietlyProjectAnalyzer;
 import ua.quietlymavenplugin.render.config.Constants;
 import ua.quietlymavenplugin.render.config.FieldResolutionMode;
 import ua.quietlymavenplugin.render.config.QuietlyPluginConfig;
+import ua.quietlymavenplugin.render.report.ModuleContextDiagnostics;
 import ua.quietlymavenplugin.render.report.QuietlyReport;
+import ua.quietlymavenplugin.render.report.ReportType;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * Checks whether discovered Hibernate filters have the service, field, fixture and generated-test prerequisites
@@ -110,13 +110,22 @@ public class FilterDoctorMojo extends AbstractMojo
                   fieldResolutionMode
          );
 
-         List<FilterEntityInfo> entities = FilterScanner.scanProjectEntities(
-                  project.getCompileClasspathElements(),
-                  project.getBuild().getOutputDirectory(),
-                  EntityScanOptions.filteredApplicationEntities(config.entityPackagePatternForScan())
-         );
+         if (config.pomPackaging())
+         {
+            QuietlyReport report = new QuietlyReport(ReportType.PROJECT_DIAGNOSTICS);
+            ModuleContextDiagnostics.addAggregatorWarningIfNeeded(report, config);
+            report.write(config);
+            QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(getLog(), project, config);
+            analyzer.logSummary(report);
+            getLog().warn(Constants.QUIETLY_WARN + ModuleContextDiagnostics.AGGREGATOR_WARNING_MESSAGE);
+            getLog().info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
+            getLog().info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
+            return;
+         }
+
+         DiscoveredProject discoveredProject = new ProjectDiscovery(project, config).discoverFilteredApplicationEntities();
          QuietlyProjectAnalyzer analyzer = new QuietlyProjectAnalyzer(getLog(), project, config);
-         QuietlyReport report = analyzer.doctor(entities);
+         QuietlyReport report = analyzer.doctor(discoveredProject);
          analyzer.logSummary(report);
          getLog().info(Constants.QUIETLY_INFO + "Wrote report: " + config.reportFile());
          getLog().info(Constants.QUIETLY_INFO + "Wrote JSON report: " + config.jsonReportFile());
