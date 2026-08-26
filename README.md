@@ -14,89 +14,87 @@
   </a>
 </p>
 
-Quietly is a Maven plugin for Quarkus/Hibernate projects. It scans JPA entities, reads Hibernate `@Filter` and
-`@FilterDef` metadata, diagnoses missing test prerequisites, and generates JUnit/RestAssured integration tests for REST
-filters.
+# Quietly
 
-Current Maven coordinates use groupId `io.github.quietly-official` and version `0.2.0`.
+Quietly is an open-source Maven plugin for Quarkus and Hibernate projects. It discovers JPA entities and Hibernate
+filters, diagnoses whether filter tests can be generated, and creates incremental JUnit/RestAssured integration tests.
 
-Start here:
+Quietly works on the current Maven module. It is module-aware, but it is not a reactor aggregator plugin.
 
-- [English documentation](docs/eng_.md)
-- [Documentazione italiana](docs/it_.md)
+## Quick start
 
-Quietly requires Java 17 and is built against Maven 3.9.6 as its minimum documented Maven baseline.
+Quietly 0.2.0 requires Java 17 and Maven 3.9.6 or newer.
 
-For regular builds, bind Quietly to Maven's `generate-test-sources` phase and run:
+Add the generated-test runtime support:
+
+```xml
+<dependency>
+    <groupId>io.github.quietly-official</groupId>
+    <artifactId>quietly-test-support</artifactId>
+    <version>0.2.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Add the plugin to the concrete Quarkus application/test module:
+
+```xml
+<plugin>
+    <groupId>io.github.quietly-official</groupId>
+    <artifactId>quietly-maven-plugin</artifactId>
+    <version>0.2.0</version>
+    <executions>
+        <execution>
+            <id>generate-quietly-filter-tests</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+                <goal>filter-tests</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <basePackage>com.acme.quietlydemo</basePackage>
+        <entityPackagePattern>${basePackage}.model</entityPackagePattern>
+        <servicePackagePattern>${basePackage}.services.rs</servicePackagePattern>
+        <serviceNamePattern>${entitySimpleName}ServiceRs</serviceNamePattern>
+    </configuration>
+</plugin>
+```
+
+Then run the normal Maven lifecycle:
 
 ```bash
 mvn test
 ```
 
-This generates tests under `target/generated-test-sources/quietly`, registers that directory as a test source root,
-compiles the generated classes, and runs them in the same Maven lifecycle.
+Quietly generates tests under `target/generated-test-sources/quietly`, registers that directory as a test source root,
+and lets Maven compile and execute the tests in the same invocation.
 
-Recommended first run:
+For a guided first run, see [Getting started](docs/getting-started.md).
 
-1. Run `quietly:scan` to inventory filters.
-2. Run `quietly:doctor` to find missing services, unresolved fields, fixtures, and stale generated tests.
-3. Run `quietly:filter-tests` once the report looks sane.
-4. Run `quietly:crud-tests` to generate baseline REST CRUD smoke tests for conventional services.
+## Maven goals
 
-See the language-specific documentation for the lifecycle-bound plugin configuration.
+| Goal | Purpose |
+| --- | --- |
+| [`quietly:scan`](docs/scan.md) | Inventory Hibernate filters without evaluating generation readiness. |
+| [`quietly:doctor`](docs/doctor.md) | Diagnose service, field, fixture, module, and existing-test readiness. |
+| [`quietly:filter-tests`](docs/filter-tests.md) | Generate or update filter integration tests. |
+| [`quietly:crud-tests`](docs/crud-tests.md) | Generate experimental, convention-based CRUD smoke tests. |
 
-Generated tests are active by default, idempotent, and reported in both Markdown and JSON:
+## Documentation
 
-```text
-target/quietly/filters-report.md
-target/quietly/filters-report.json
-target/quietly/crud-report.md
-target/quietly/crud-report.json
-```
+- [Documentation index](docs/index.md)
+- [Concepts and status model](docs/concepts.md)
+- [Configuration reference](docs/configuration.md)
+- [Multi-module projects](docs/multi-module.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Architecture](docs/architecture.md)
 
-Report percentages describe generation readiness, not runtime test coverage. Quietly reports execution as
-`NOT_MEASURED`; Maven/Surefire is the source of truth for whether generated tests ran and passed.
+## Project links
 
-## Multi-module Maven projects
+- [Website](https://quietly.cloud)
+- [GitHub repository](https://github.com/quietly-official/quietly)
+- [Maven Central](https://central.sonatype.com/artifact/io.github.quietly-official/quietly-maven-plugin/0.2.0)
+- [Consumer demo](https://github.com/quietly-official/quietly-demo)
 
-Quietly supports Maven multi-module builds when the plugin is configured in the concrete application/test module that
-owns the Quarkus test runtime. Quietly is not currently a reactor aggregator plugin: it does not scan every child module
-from a parent `packaging=pom` project, and it never writes generated tests into a module other than the current
-`MavenProject`.
-
-In a supported layout, configure Quietly in the module that runs the tests:
-
-```text
-root/
-  pom.xml
-  app/
-    pom.xml        # Quietly configured here
-  model/
-    pom.xml        # dependency visible to app
-  service/
-    pom.xml        # dependency visible to app
-```
-
-The entity and REST service classes must be visible on the compile/test classpath of the module where Quietly runs. The
-generated tests are written under that same module's `target/generated-test-sources/quietly` directory.
-
-This layout is not supported yet:
-
-```text
-root/
-  pom.xml          # Quietly configured only here, packaging=pom
-  app/
-  model/
-  service/
-```
-
-Run `quietly:scan` or `quietly:doctor` from a parent aggregator only to get a diagnostic warning; configure generation
-inside the application/test module.
-
-The main CI also checks out
-[`quietly-demo`](https://github.com/quietly-official/quietly-demo) and runs its
-plain `mvn clean test` lifecycle against the Quietly commit or pull request under test. The build fails if the generated
-test source or its Surefire execution evidence is missing.
-
-Current scope: Quarkus, Hibernate ORM/Panache, REST endpoints, and integration tests. Spring support and HTML reports
-are intentionally out of scope for now.
+Quietly is licensed under the [Apache License 2.0](LICENSE).
