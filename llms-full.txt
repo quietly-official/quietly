@@ -1,0 +1,350 @@
+# Quietly — consolidated technical context
+
+This file is a machine-friendly consolidation of repository-verified Quietly documentation. It is useful as plain text;
+it does not require support for a particular LLM indexing protocol.
+
+## 1. Project identity
+
+- Name: Quietly
+- Type: open-source Maven plugin and generated-test support library
+- Current public version: 0.2.0
+- Group ID: io.github.quietly-official
+- License: Apache License 2.0
+- Website: https://quietly.cloud
+- Source: https://github.com/quietly-official/quietly
+
+## 2. Purpose
+
+Quietly analyzes compiled Quarkus/Hibernate projects, discovers JPA entities and Hibernate filter metadata, diagnoses
+whether filter tests can be generated, and creates incremental JUnit/RestAssured integration-test source.
+
+Quietly follows a discover → analyze → diagnose → plan → generate model. It is designed to reduce repeatable filter-test
+boilerplate without inventing endpoints, fixtures, payloads, or business rules.
+
+Quietly does not replace custom tests. Source-generation readiness does not imply runtime success or test coverage.
+
+## 3. Supported ecosystem
+
+Repository-verified baseline:
+
+- Java release: 17
+- Maven minimum declared by the plugin: 3.9.6
+- Quarkus platform used by the build and demo: 3.11.0
+- Hibernate ORM/Panache entities and filters
+- JUnit 5, Quarkus test runtime, RestAssured, and Maven Surefire
+
+Quarkus 3.11.0 is the build baseline, not a claim that every other Quarkus version is supported. Spring and HTML
+reports are outside the current scope.
+
+## 4. Maven coordinates
+
+Published artifacts at version 0.2.0:
+
+```text
+io.github.quietly-official:quietly-parent:0.2.0
+io.github.quietly-official:quietly-core:0.2.0
+io.github.quietly-official:quietly-test-support:0.2.0
+io.github.quietly-official:quietly-maven-plugin:0.2.0
+```
+
+`quietly-test-support` belongs on a consumer's test classpath. `quietly-maven-plugin` performs discovery, planning,
+generation, and reporting.
+
+## 5. Installation
+
+Add generated-test runtime support:
+
+```xml
+<dependency>
+    <groupId>io.github.quietly-official</groupId>
+    <artifactId>quietly-test-support</artifactId>
+    <version>0.2.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Add the plugin to the concrete module that owns the Quarkus test runtime and contains the entity classes in its compiled
+output:
+
+```xml
+<plugin>
+    <groupId>io.github.quietly-official</groupId>
+    <artifactId>quietly-maven-plugin</artifactId>
+    <version>0.2.0</version>
+    <executions>
+        <execution>
+            <id>generate-quietly-filter-tests</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+                <goal>filter-tests</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <basePackage>com.acme.quietlydemo</basePackage>
+        <entityPackagePattern>${basePackage}.model</entityPackagePattern>
+        <servicePackagePattern>${basePackage}.services.rs</servicePackagePattern>
+        <serviceNamePattern>${entitySimpleName}ServiceRs</serviceNamePattern>
+        <fieldResolutionMode>STRICT</fieldResolutionMode>
+    </configuration>
+</plugin>
+```
+
+Run source generation, test compilation, and execution in one lifecycle:
+
+```bash
+mvn test
+```
+
+Direct inspection goals require compiled application classes:
+
+```bash
+mvn compile quietly:scan
+mvn compile quietly:doctor
+```
+
+## 6. Mental model
+
+1. Module context identifies the current Maven artifact, packaging, base/build/output directories, generated-test
+   directory, and reactor metadata.
+2. Discovery scans the current module's compiled output for eligible JPA entities and extracts Hibernate filter metadata.
+3. Resolvers compute expected REST services, entity fields, and SQL fixture conventions.
+4. `DoctorPlanner` creates filter `GenerationPlan` entries with `READY`, `BLOCKED`, `EXISTING`, or `STALE` state.
+5. `doctor` renders the plan as diagnostics; `filter-tests` consumes the same service/field decisions for source changes.
+6. AST builders render Java after resolution/planning; reports describe discovery, readiness, generation, and module
+   context separately.
+
+Important terms:
+
+- Discovered: filter metadata was found; generation readiness was not necessarily evaluated.
+- Ready/generatable: expected REST service and entity field resolved.
+- Blocked: service or field resolution is missing or ambiguous.
+- Existing: a matching Quietly-marked generated method exists.
+- Stale: a marked generated method refers to a filter/operation no longer discovered/generated.
+- Generated: a generation event added source in a non-dry run, except that experimental CRUD dry-run report wording is
+  currently less precise.
+- Execution `NOT_MEASURED`: Quietly does not read Surefire pass/fail results.
+
+## 7. Goal reference
+
+### `quietly:scan`
+
+- Default phase: `process-classes`
+- Dependency scope: compile plus runtime
+- Discovers entities with Hibernate filters and writes filter inventory reports.
+- Does not resolve generation readiness and does not write test source.
+- Default reports: `target/quietly/filters-report.md` and `.json`.
+
+### `quietly:doctor`
+
+- Default phase: `process-classes`
+- Dependency scope: compile plus runtime
+- Diagnoses service, field, fixture, module, existing-test, stale-test, and invalid-file state.
+- Uses `DoctorPlanner`/`GenerationPlan` and writes no Java source.
+- `failOnProblems=true` fails Maven after the report is written.
+- On `packaging=pom`, emits `WARNING_AGGREGATOR_MODULE`; this is not a reactor scan.
+
+### `quietly:filter-tests`
+
+- Default phase: `generate-test-sources`
+- Dependency scope: compile plus runtime
+- Generates or updates `<Entity>FiltersTest` classes.
+- Registers the generated directory as a Maven test source root when `dryRun=false`.
+- Uses the same filter plan decisions as doctor for service and field readiness.
+- Default failure behavior rejects missing services and unresolved fields.
+
+### `quietly:crud-tests`
+
+- Default phase: `generate-test-sources`
+- Dependency scope: compile plus runtime
+- Experimental and convention-based.
+- Discovers all eligible compiled application entities, not only entities with filters.
+- Generates collection GET expecting 200 and `GET /{id}` with a missing ID expecting 404.
+- Does not infer POST, PUT, DELETE, DTOs, payloads, or endpoint capabilities.
+- Default reports: `target/quietly/crud-report.md` and `.json`.
+
+## 8. Configuration reference
+
+All user parameters are optional. Maven injects a required read-only `MavenProject` internally.
+
+| Parameter | Type | Default | Goals | Meaning |
+| --- | --- | --- | --- | --- |
+| `basePackage` | String | derived per entity | all | Root used by package/name patterns; does not restrict scanning alone. |
+| `entityPackagePattern` | String | no restriction | all | Exact entity package, or package plus subpackages when ending in `.*`. |
+| `servicePackagePattern` | String | derived convention | all | Expected REST service package. |
+| `serviceNamePattern` | String | `${entitySimpleName}ServiceRs` | all | Expected REST service simple name. |
+| `testOutputDirectory` | File | `target/generated-test-sources/quietly` | all | Generated source directory or inspected generated-test location. |
+| `reportFile` | File | filters report; CRUD uses CRUD report | all | Markdown report path; JSON is derived beside it. |
+| `disabledByDefault` | boolean | false | filter-tests, crud-tests | Adds `@Disabled` to generated methods. |
+| `failOnMissingService` | boolean | true | filter-tests, crud-tests | Fail instead of skip when service resolution fails. |
+| `failOnUnresolvedField` | boolean | true | filter-tests | Fail instead of skip when field resolution fails. |
+| `dryRun` | boolean | false | filter-tests, crud-tests | Report without source writes/source-root registration. |
+| `fieldResolutionMode` | enum | STRICT | scan, doctor, filter-tests | Doctor/filter matching mode; scan records it but does not decide readiness. |
+| `failOnProblems` | boolean | false | doctor | Fail after diagnostic report contains problem statuses. |
+
+Supported placeholders:
+
+- `${basePackage}` in package patterns; configuring the placeholder without `basePackage` is invalid.
+- `${entitySimpleName}` in service naming.
+
+Field resolution:
+
+- `STRICT`: exactly one field with the filter's final name segment must exist across the entity hierarchy.
+- `FUZZY`: choose the unique closest field and emit a warning; ambiguous results remain blocked.
+
+Relative output/report paths resolve from the current module base directory. The configuration source of truth is the
+Mojo `@Parameter` metadata plus `QuietlyPluginConfig`; the published descriptor can be inspected with Maven
+`help:describe -Ddetail`.
+
+## 9. Generation behavior
+
+Default generated source directory:
+
+```text
+target/generated-test-sources/quietly
+```
+
+Filter generated classes:
+
+- are named `<Entity>FiltersTest`;
+- extend `FilterTestBase` from `quietly-test-support`;
+- use `@QuarkusTest` and `@TestHTTPEndpoint`;
+- contain a fixture-loading `beforeEach()`;
+- mark generated methods with `@quietly-generated filter="<filter-name>"`.
+
+CRUD generated classes are named `<Entity>CrudTest` and use markers:
+
+```text
+@quietly-generated crud="list"
+@quietly-generated crud="get-missing"
+```
+
+Idempotency rules:
+
+- do not add duplicate recognized method names;
+- add missing generated methods;
+- add a missing Quietly marker to a recognized matching method;
+- add `beforeEach()` when absent;
+- preserve custom methods;
+- report stale generated methods without deleting them;
+- report an invalid/unparseable existing target instead of replacing it destructively.
+
+Generated source is AST-rendered and may be reformatted during updates.
+
+Fixture/runtime behavior:
+
+- generated setup expects compatible Panache operations;
+- the entity is expected to expose public `TABLE_NAME`;
+- fixture path convention is `src/test/resources/sql/<TABLE_NAME>.sql`;
+- doctor reports fixture problems, but missing fixture/table-name diagnostics do not currently block filter source
+  generation;
+- database, schema, fixture content, endpoint behavior, and security remain consumer responsibilities.
+
+Reports are Markdown plus JSON. Readiness metrics describe generation, not executed test coverage. Maven/Surefire owns
+runtime results.
+
+## 10. Multi-module behavior
+
+Quietly operates on the current `MavenProject`. It does not iterate `project.getCollectedProjects()`, merge child output,
+select another module, or write generated source into a sibling.
+
+The plugin belongs in the concrete module that:
+
+- owns the Quarkus test runtime;
+- runs the generated tests;
+- contains discoverable entities in its compiled output;
+- can load expected REST services from its project classloader.
+
+The current entity scanner indexes the executing module's output directory. Merely adding a separate entity/model JAR
+to the compile classpath does not cause that JAR to be scanned. Service classes may be loaded from dependencies during
+resolution.
+
+Running scan/doctor on a parent `packaging=pom` produces an aggregator warning, not child-module results. Quietly must
+not be changed into a reactor aggregator implicitly.
+
+## 11. Architecture
+
+```text
+MavenProject
+  → ModuleContext
+  → ProjectDiscovery
+  → DiscoveredProject
+  → ServiceResolver / FixtureResolver / FieldResolver
+  → DoctorPlanner
+  → GenerationPlan
+  → doctor / filter-tests
+  → QuietlyReport / generated test source
+```
+
+Module responsibilities:
+
+- `quietly-parent`: reactor and shared dependency/build/release metadata.
+- `quietly-core`: compiled entity scanning and Hibernate filter metadata extraction.
+- `quietly-test-support`: runtime base classes and helpers imported by generated tests.
+- `quietly-maven-plugin`: Mojo entry points, module context, discovery orchestration, resolvers, planning, AST generation,
+  and reports.
+- `quietly-demo`: separate external repository, not a reactor module; validates lifecycle-bound consumer behavior.
+
+Architecture boundaries:
+
+- discovery finds facts and must not depend on Java rendering;
+- resolvers make service/field/fixture outcomes explicit;
+- `GenerationPlan` is the shared filter readiness source for doctor and filter generation;
+- AST builders render already-resolved decisions;
+- report rendering must not redefine readiness;
+- CRUD remains a separate experimental convention path and does not currently infer endpoint capabilities through the
+  filter plan.
+
+## 12. Troubleshooting
+
+- Zero entities/filters: compile first; verify current module output and `entityPackagePattern`.
+- Wrong module: inspect report module context; configure the concrete Quarkus test module, not `packaging=pom` parent.
+- Missing service: compare the reported expected class; fix classpath or service package/name patterns.
+- Unresolved field: fix filter metadata/field name; use `FUZZY` only as explicit legacy diagnostics.
+- Ambiguous field: remove exact hierarchy shadowing or fuzzy ties; Quietly intentionally does not guess.
+- Missing fixture/table name: provide public `TABLE_NAME` and consumer-owned SQL fixture.
+- Generated but not compiled: bind generation to `generate-test-sources` and compile in the same Maven process.
+- Generated but not executed: inspect Surefire, disabled state, test includes, and lifecycle; `NOT_MEASURED` is expected.
+- Dry-run wrote no source: expected; inspect the dry-run flag and report rather than assuming generation happened.
+- Runtime DB/security/endpoint failure: fix consumer environment or write project-specific tests.
+- Possible Quietly defect: preserve version, configuration, module context, reports, generated source, and a minimal
+  reproducer; incorrect planning consistency, invalid rendering, or non-idempotent duplication are likely plugin issues.
+
+## 13. Known limitations
+
+- Current-module scope only; no automatic reactor traversal.
+- Entity discovery indexes current module output rather than arbitrary dependency JARs.
+- Service and field readiness does not prove fixture/runtime readiness.
+- Quietly does not create business fixtures or environment configuration.
+- Quietly does not measure test execution or runtime coverage.
+- Stale generated methods are reported, not removed.
+- Service and endpoint discovery are convention-based.
+- Spring support and HTML reports are out of scope.
+
+## 14. Experimental features
+
+CRUD generation is experimental. It assumes conventional REST behavior and generates exactly two smoke-test operations:
+collection GET → 200 and missing-ID GET → 404. It is not production-complete endpoint analysis. Generated CRUD source
+must be reviewed against the consumer API, security, and data model. CRUD dry-run currently suppresses writes but its
+event status wording is less precise than filter dry-run.
+
+## 15. Source and release links
+
+- Website: https://quietly.cloud
+- GitHub: https://github.com/quietly-official/quietly
+- Maven Central: https://central.sonatype.com/artifact/io.github.quietly-official/quietly-maven-plugin/0.2.0
+- External consumer demo: https://github.com/quietly-official/quietly-demo
+- Repository documentation entry point: `docs/index.md`
+- Release process source of truth: `RELEASE.md`
+
+Target website documentation routes are listed in `llms.txt`. The repository Markdown sources exist, but the
+`https://quietly.cloud/docs/...` routes are not asserted to be live yet.
+
+Repository validation command:
+
+```bash
+./mvnw -B -ntp clean verify
+```
+
+The CI build also installs the current Quietly change and runs the external `quietly-demo` lifecycle, verifying that the
+generated `CustomerFiltersTest` is created and executed.

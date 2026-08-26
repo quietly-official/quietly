@@ -1,0 +1,54 @@
+# Quietly
+
+Quietly is an open-source Maven plugin for Quarkus and Hibernate projects. It discovers compiled JPA entities and
+Hibernate filters, diagnoses filter-test readiness, and incrementally generates JUnit/RestAssured integration tests.
+
+Website: https://quietly.cloud
+
+## Documentation
+
+The canonical documentation is published under quietly.cloud from source files maintained in the Quietly repository:
+
+- Index: https://quietly.cloud/docs/
+- Getting started: https://quietly.cloud/docs/getting-started/
+- Concepts: https://quietly.cloud/docs/concepts/
+- Configuration: https://quietly.cloud/docs/configuration/
+- Scan: https://quietly.cloud/docs/scan/
+- Doctor: https://quietly.cloud/docs/doctor/
+- Filter tests: https://quietly.cloud/docs/filter-tests/
+- CRUD tests: https://quietly.cloud/docs/crud-tests/
+- Multi-module: https://quietly.cloud/docs/multi-module/
+- Troubleshooting: https://quietly.cloud/docs/troubleshooting/
+- Architecture: https://quietly.cloud/docs/architecture/
+
+## Maven
+
+Current version: `0.2.0`
+
+- `io.github.quietly-official:quietly-parent:0.2.0`
+- `io.github.quietly-official:quietly-core:0.2.0`
+- `io.github.quietly-official:quietly-test-support:0.2.0`
+- `io.github.quietly-official:quietly-maven-plugin:0.2.0`
+
+## Goals
+
+- `quietly:scan` — inventory discovered Hibernate filters.
+- `quietly:doctor` — diagnose service, field, fixture, module, and generated-test state.
+- `quietly:filter-tests` — incrementally generate filter integration tests.
+- `quietly:crud-tests` — generate experimental convention-based CRUD smoke tests.
+
+## Source
+
+https://github.com/quietly-official/quietly
+
+## Releases
+
+https://central.sonatype.com/artifact/io.github.quietly-official/quietly-maven-plugin/0.2.0
+
+## Important limitations
+
+- Quietly operates on the current `MavenProject`; it does not automatically traverse a Maven reactor.
+- Entity discovery indexes the current module's compiled output, not arbitrary dependency JARs.
+- CRUD generation is experimental and limited to fixed GET smoke-test conventions.
+- SQL fixtures, business data, database/security configuration, and runtime environment remain consumer responsibilities.
+- Generation readiness is not runtime test coverage; Quietly reports execution as `NOT_MEASURED`.
